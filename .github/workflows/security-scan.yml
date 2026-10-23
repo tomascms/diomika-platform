@@ -1,0 +1,84 @@
+name: Security Scanning
+
+# Verificações que falham a sério (antes: `|| true` em tudo e uploads SARIF
+# que exigem GitHub Advanced Security, indisponível neste repositório privado).
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  schedule:
+    - cron: "0 2 * * 0" # domingo, 02:00 UTC — apanha CVEs novas sem haver commits
+
+permissions:
+  contents: read
+  pull-requests: read # gitleaks-action lista os commits do PR
+
+jobs:
+  secrets:
+    name: Secrets no código
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Gitleaks (commits deste push / PR)
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+          # O relatório fica no log; o upload falhava com a quota de artefactos cheia.
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+
+  dependencies:
+    name: Dependências de produção
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: pip-audit (requirements.txt da API)
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements.txt --strict --progress-spinner off
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+
+      - name: npm audit — loja (só dependências de produção)
+        working-directory: frontend-web
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: npm audit — backoffice (só o que vai no instalador)
+        working-directory: backoffice-desktop
+        run: npm audit --omit=dev --audit-level=high
+
+  container:
+    name: Imagem Docker da API
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build local
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: diomika-api:scan
+
+      - name: Trivy (vulnerabilidades críticas com correcção disponível)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: diomika-api:scan
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table

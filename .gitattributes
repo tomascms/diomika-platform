@@ -1,0 +1,3 @@
+# Scripts que correm em Linux (VM, CI, macOS) têm de ficar com LF.
+*.sh text eol=lf
+*.command text eol=lf

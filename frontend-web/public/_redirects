@@ -1,0 +1,2 @@
+/produtos/:slug    /categoria/:slug   301
+/*                 /index.html   200

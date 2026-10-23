@@ -1,0 +1,47 @@
+# Ficheiros que NÃO entram na imagem Docker (Render)
+.git
+.gitignore
+.cursor
+.env
+.env.*
+!.env
+
+# Frontend (build separado no Cloudflare)
+frontend-web/node_modules
+frontend-web/dist
+
+# Backoffice (só corre no PC)
+backoffice-desktop/node_modules
+backoffice-desktop/release
+
+# Python cache / venv
+__pycache__
+*.py[cod]
+.venv
+venv
+
+# Logs e estado local
+logs
+*.log
+backend-api/.schema_snapshot.json
+backend-api/.email_worker_state.json
+backend-api/.email_worker_heartbeat.json
+backend-api/data/admin_users.json
+backend-api/data/admin_users.json.bak
+backend-api/data/admin_users.tmp
+backend-api/sql/generated_*.sql
+
+# IDE
+.vscode
+.idea
+*.md
+!README.md
+
+deploy
+deploy/urls.toml
+
+DIOMIKA.bat
+DIOMIKA.command
+DIOMIKA.sh
+PREPARAR_DEPLOY.py
+docker-compose.yml

@@ -1,0 +1,5 @@
+Contact: https://www.diomika.com/contacto
+Preferred-Languages: pt, en
+Canonical: https://www.diomika.com/.well-known/security.txt
+Policy: https://www.diomika.com/privacidade
+Expires: 2027-08-16T23:59:59.000Z

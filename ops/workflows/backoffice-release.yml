@@ -1,0 +1,94 @@
+name: Backoffice release
+
+# Só com tag backoffice-v* ou à mão: o build macOS conta 10x nos minutos.
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "backoffice-v*"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            dist: dist:win
+          - os: macos-latest
+            dist: dist:mac
+          - os: ubuntu-latest
+            dist: dist:linux
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: backoffice-desktop
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: backoffice-desktop/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build installer
+        run: npm run ${{ matrix.dist }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          CSC_IDENTITY: "-"
+          DIOMIKA_DESKTOP_GATE: ${{ secrets.DIOMIKA_DESKTOP_GATE }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: diomika-backoffice-${{ matrix.os }}
+          path: |
+            backoffice-desktop/release/*.exe
+            backoffice-desktop/release/*.zip
+            backoffice-desktop/release/*.dmg
+            backoffice-desktop/release/*.AppImage
+            backoffice-desktop/release/*.blockmap
+            backoffice-desktop/release/latest*.yml
+            backoffice-desktop/release/*.AppImage
+          if-no-files-found: error
+          retention-days: 7
+
+  publish-cliente:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: diomika-backoffice-*
+          merge-multiple: true
+          path: artifacts
+
+      - name: Remove previous cliente release tag
+        run: |
+          # Apagar releases (incl. drafts) e a tag rolling para evitar conflito already_exists
+          for id in $(gh api repos/${{ github.repository }}/releases --paginate --jq '.[] | select(.tag_name=="backoffice-cliente-latest") | .id'); do
+            gh api -X DELETE "repos/${{ github.repository }}/releases/$id" || true
+          done
+          git push --delete origin backoffice-cliente-latest 2>/dev/null || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Publish public cliente release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: backoffice-cliente-latest
+          name: Diomika Backoffice cliente (latest)
+          prerelease: true
+          make_latest: false
+          files: |
+            artifacts/**/*.exe
+            artifacts/**/*.zip
+            artifacts/**/*.dmg
+            artifacts/**/*.AppImage
+          overwrite_files: true

@@ -1,0 +1,22 @@
+Diomika Backoffice — acesso
+===========================
+
+Login: ver CREDENCIAIS.secret.txt (utilizador e palavra-passe).
+Marque «Manter sessão iniciada» para não ter de entrar durante 7 dias (a sessão termina ao fim de 12 h sem uso).
+
+Precisa de internet (api.diomika.com).
+
+Instalar / abrir
+  Windows → duplo-clique em Abrir-Windows.cmd
+            (na 1.ª vez instala só para este utilizador, sem pedir administrador,
+            e cria o atalho «Diomika Backoffice» no ambiente de trabalho).
+            A partir daí actualiza-se sozinho: quando houver versão nova,
+            a aplicação pergunta se quer reiniciar.
+  macOS   → botão direito em Abrir-Mac.command → Abrir (1.ª vez), depois duplo-clique.
+            No Mac as actualizações são manuais: a aplicação avisa quando há versão nova.
+  Linux   → chmod +x Diomika-Backoffice-*-linux.AppImage && ./Diomika-Backoffice-*-linux.AppImage
+
+Mac: se aparecer "desenvolvedor não identificado", use sempre Abrir-Mac.command
+ou Definições → Privacidade e Segurança → Abrir mesmo assim.
+
+Suporte: Diomika.

@@ -1,0 +1,94 @@
+name: Deploy loja (Cloudflare Pages)
+
+# Publica a loja (www.diomika.com) sempre que a main muda em frontend-web/,
+# depois de lint + build + verificações. Também pode ser lançado à mão.
+#
+# Segredos (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN     token com "Cloudflare Pages: Edit"
+#   CLOUDFLARE_ACCOUNT_ID
+#   VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY   (públicas — protegidas por RLS)
+#   VITE_TURNSTILE_SITE_KEY, VITE_POSTHOG_KEY, VITE_POSTHOG_HOST
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend-web/**"
+      - ".github/workflows/deploy-loja.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-loja
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    defaults:
+      run:
+        working-directory: frontend-web
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend-web/package-lock.json
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - run: npm ci
+
+      - name: Lint
+        run: |
+          npx oxlint src functions
+          npx eslint src functions
+
+      - name: Build de produção
+        env:
+          VITE_API_BASE_URL: https://api.diomika.com
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_STORAGE_BUCKET: product-images
+          VITE_STORAGE_PRIVATE: "0"
+          VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}
+          VITE_POSTHOG_KEY: ${{ secrets.VITE_POSTHOG_KEY }}
+          VITE_POSTHOG_HOST: ${{ secrets.VITE_POSTHOG_HOST }}
+          # A transformação de imagens do Supabase é de plano pago — desligada.
+          VITE_IMAGE_TRANSFORM: "0"
+        run: |
+          test -n "$VITE_SUPABASE_URL" || { echo "::error::VITE_SUPABASE_URL em falta nos secrets"; exit 1; }
+          test -n "$VITE_TURNSTILE_SITE_KEY" || { echo "::error::VITE_TURNSTILE_SITE_KEY em falta — o captcha do contacto deixaria de funcionar"; exit 1; }
+          npm run build:prod
+
+      - name: Sem secrets no bundle e CSP correcta
+        working-directory: .
+        run: |
+          python deploy/verify_bundle_secrets.py
+          python deploy/verify_csp.py
+
+      - name: Publicar no Cloudflare Pages
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: frontend-web
+          # A partir de frontend-web para incluir functions/ (cache do catálogo + redirecções).
+          command: pages deploy dist --project-name=diomika-loja --branch=production --commit-hash=${{ github.sha }}
+
+      - name: Verificação pós-deploy
+        working-directory: .
+        run: |
+          sleep 10
+          code=$(curl -s -o /dev/null -w "%{http_code}" -A "Mozilla/5.0 (DiomikaDeployCheck)" https://www.diomika.com/)
+          api=$(curl -s -o /dev/null -w "%{http_code}" -A "Mozilla/5.0 (DiomikaDeployCheck)" https://www.diomika.com/api/categorias)
+          echo "loja=$code api(edge)=$api"
+          test "$code" = 200 && test "$api" = 200

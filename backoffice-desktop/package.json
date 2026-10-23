@@ -1,0 +1,107 @@
+{
+  "name": "backoffice-desktop",
+  "version": "1.2.1",
+  "private": true,
+  "description": "Diomika Backoffice — app de secretária (Windows / macOS / Linux)",
+  "author": "Diomika",
+  "main": "electron/main.cjs",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k \"npm run dev:ui\" \"wait-on http://127.0.0.1:5174 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5174 electron .\"",
+    "dev:ui": "cross-env NODE_OPTIONS=--use-system-ca vite",
+    "dev:browser": "cross-env NODE_OPTIONS=--use-system-ca vite --open",
+    "build": "vite build",
+    "start": "electron .",
+    "dist": "npm run dist:win",
+    "dist:win": "node scripts/write-gate.cjs && vite build && electron-builder --win nsis zip --x64 --publish never",
+    "dist:mac": "node scripts/write-gate.cjs && vite build && electron-builder --mac dmg --universal --publish never",
+    "dist:linux": "node scripts/write-gate.cjs && vite build && electron-builder --linux AppImage --x64 --publish never",
+    "dist:cliente": "node scripts/build-cliente-pack.cjs",
+    "dist:dir": "node scripts/write-gate.cjs && vite build && electron-builder --dir"
+  },
+  "build": {
+    "appId": "pt.diomika.backoffice",
+    "productName": "Diomika Backoffice",
+    "copyright": "Copyright © Diomika",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "electron/main.cjs"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ],
+      "signAndEditExecutable": false,
+      "requestedExecutionLevel": "asInvoker",
+      "artifactName": "Diomika-Backoffice-${version}-windows.zip",
+      "icon": "electron/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowElevation": false,
+      "packElevateHelper": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Diomika Backoffice",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "Diomika-Backoffice-${version}-setup.exe"
+    },
+    "portable": {
+      "artifactName": "Diomika-Backoffice-${version}-windows.exe"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.business",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "identity": "-",
+      "artifactName": "Diomika-Backoffice-${version}-mac.dmg",
+      "icon": "electron/icon.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Office",
+      "artifactName": "Diomika-Backoffice-${version}-linux.AppImage",
+      "icon": "electron/icon.png"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://api.diomika.com/system/desktop-updates"
+      }
+    ]
+  },
+  "dependencies": {
+    "@fontsource-variable/archivo": "^5.3.0",
+    "electron-updater": "^6.8.9",
+    "vue": "^3.5.32",
+    "vue-router": "^5.0.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.6",
+    "concurrently": "^10.0.5",
+    "cross-env": "^7.0.3",
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
+    "vite": "^8.0.8",
+    "wait-on": "^9.5.1"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  }
+}

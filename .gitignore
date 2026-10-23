@@ -1,0 +1,102 @@
+# Secrets — nunca versionar .env (fica só na VM / PC local)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Env antigos (não usar)
+backend-api/.env
+frontend-web/.env
+
+# Python
+__pycache__/
+.pytest_cache/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+temp/
+*.png
+# Ícones da marca (gerados por scripts/generate_brand_icons.py) — versionados
+!frontend-web/public/*.png
+!backoffice-desktop/electron/icon.png
+
+# Logs & runtime state
+backend-api/logs/
+*.jsonl
+backend-api/data/admin_users.json
+backend-api/data/admin_users.tmp
+backend-api/data/admin_users.json.bak
+backend-api/data/*.json.bak
+*.log
+backend-api/logs/dlq_events.jsonl
+
+# Schema snapshot (gerado automaticamente)
+backend-api/.schema_snapshot.json
+backend-api/.email_worker_state.json
+backend-api/.email_worker_heartbeat.json
+backend-api/sql/generated_*.sql
+deploy/urls.toml
+deploy/beta.state.json
+deploy/production.ready.json
+deploy/artifacts/
+deploy/backups/
+deploy/launch.state.json
+deploy/alerts.log
+deploy/.security_audit_latest.json
+deploy/proof/
+*.sql.gz
+deploy/cloudflared-*.log
+deploy/beta-api.log
+deploy/extreme_test.log
+deploy/generated_catalog_infra.sql
+deploy/_infra_only.sql
+deploy/_pending_catalog.sql
+deploy/_rls_compact.sql
+deploy/_rls_new_only.sql
+deploy/_schema_only.sql
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+frontend-web/.wrangler/
+frontend-web/playwright-report/
+frontend-web/test-results/
+backoffice-desktop/build/
+
+# IDE & OS
+.cursor/
+.vscode/
+.idea/
+.local-jobs.json
+.local-pids.json
+.DS_Store
+Thumbs.db
+
+# Build
+backoffice-desktop/release/
+backoffice-desktop/release-fresh/
+backoffice-desktop/_asar_check/
+backoffice-desktop/_extract_tmp/
+backoffice-desktop/.diomika/
+backoffice-desktop/electron/desktop-gate.cjs
+cliente-backoffice/
+*.timestamp-*-*.mjs
+.eslintcache
+
+# Local runtime / secret backups (nunca commit)
+dump.rdb
+.env*.bak*
+.env.env.bak_clean
+deploy/.cf_token_tmp
+monitor-hub/config.local.json
+monitor-hub/release/
+monitor-hub/Diomika-Command-Center-*.exe
+monitor-hub/hub-*.json
+monitor-hub/incident-history.json
+monitor-hub/ui/_preview-snapshot.json
+monitor-hub/ui/preview.html
+.local-previews/
+deploy/_*.sql
+deploy/generated_*.sql.coverage

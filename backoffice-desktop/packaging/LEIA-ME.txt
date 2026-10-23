@@ -1,0 +1,17 @@
+# Diomika Backoffice — ficheiros para o cliente
+
+Pacote limpo: 3 instaladores + credenciais + atalhos de abertura.
+
+| SO      | Instalador                              | Como abrir              |
+|---------|-----------------------------------------|-------------------------|
+| Windows | `Diomika-Backoffice-*-windows.zip`      | `Abrir-Windows.cmd`     |
+| macOS   | `Diomika-Backoffice-*-mac.dmg`          | `Abrir-Mac.command`     |
+| Linux   | `Diomika-Backoffice-*-linux.AppImage`   | ver CREDENCIAIS.txt     |
+
+Credenciais: `CREDENCIAIS.secret.txt`
+
+Preparar pasta local:
+  node backoffice-desktop/scripts/prepare-cliente-pack.cjs
+
+Ou descarregar release + preparar:
+  python deploy/fetch_backoffice_release.py

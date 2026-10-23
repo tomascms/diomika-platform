@@ -1,0 +1,11 @@
+# Gitleaks — falha se secrets entrarem no git
+title = "Diomika gitleaks"
+
+[allowlist]
+paths = [
+  '''deploy/env\..*\.example$''',
+  '''\.env\.example$''',
+]
+regexes = [
+  '''1x00000000000000000000AA''',
+]

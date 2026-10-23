@@ -1,0 +1,79 @@
+# API Diomika — produção €0 (GCP e2-micro Always Free + Tunnel)
+
+# Único custo do projecto: domínio diomika.com (~/ano).
+# Uso:
+#   docker compose -f deploy/docker-compose.free.yml up -d --build
+#   docker compose -f deploy/docker-compose.free.yml --profile tunnel up -d --build
+# Guia: docs/runbook.md
+
+# Logs do Docker limitados (sem isto crescem até encher o disco).
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    logging: *logging
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
+    # Só localhost na VM — rate-limit / não expor
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    logging: *logging
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      # Persiste admin_users.json entre rebuilds/restarts do contentor
+      - ../backend-api/data:/app/backend-api/data
+    env_file:
+      - ../.env
+    environment:
+      DIOMIKA_ENV: production
+      DIOMIKA_DOMAIN: diomika.com
+      RUN_EMBEDDED_WORKERS: "true"
+      PYTHONPATH: /app/backend-api
+      TRUST_PROXY: "1"
+      REDIS_URL: redis://redis:6379/0
+      SUPABASE_STORAGE_PRIVATE: "0"  # bucket product-images público (fotos do catálogo)
+      CATALOG_CACHE_TTL: "3600"
+      # 1 worker: tráfego baixo, metade da memória na e2-micro (1 GB) e sem o
+      # supervisor do uvicorn a matar workers ocupados; o Docker reinicia se cair.
+      UVICORN_WORKERS: "1"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-A", "DiomikaHealthcheck/1.0", "http://127.0.0.1:8000/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  # HTTPS público sem abrir portas — activar com: --profile tunnel
+  # network_mode:host → origin http://127.0.0.1:8000 (igual ao hostname no Zero Trust)
+  cloudflared:
+    image: cloudflare/cloudflared:2024.12.2
+    restart: unless-stopped
+    profiles: ["tunnel"]
+    logging: *logging
+    network_mode: host
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      api:
+        condition: service_healthy

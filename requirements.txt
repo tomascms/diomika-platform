@@ -1,0 +1,24 @@
+# Diomika — dependências de produção (API + workers embutidos).
+# Só o que a API importa a correr. Testes, scanners e os extras dos módulos
+# opcionais (tracing, websockets, sagas…) estão em requirements-dev.txt, para
+# a imagem Docker da VM (e2-micro, 1 GB) ficar pequena e o build não falhar.
+fastapi
+uvicorn
+python-multipart
+python-dotenv
+supabase
+requests
+pydantic
+email-validator
+psycopg2-binary
+Pillow
+python-barcode
+reportlab
+certifi
+pip-system-certs
+pyotp
+redis
+sentry-sdk[fastapi]
+boto3
+cryptography
+httpx

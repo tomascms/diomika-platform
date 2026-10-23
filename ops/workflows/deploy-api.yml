@@ -1,0 +1,76 @@
+name: Deploy API (VM GCP)
+
+# Publica a API na VM só à mão (Actions → Deploy API → Run workflow).
+# Envia o código e corre deploy/vm/remote_deploy.sh na VM (imagem Docker com recuo automático).
+# O .env de produção fica na VM (~/diomika/.env) e não passa pelo GitHub.
+#
+# Configuração (Settings → Secrets and variables → Actions, ambiente "production"):
+#   secrets  GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_SERVICE_ACCOUNT
+#   vars     GCP_PROJECT, GCP_ZONE, GCP_VM_NAME, VM_APP_DIR (caminho absoluto, ex. /home/<user>/diomika)
+# A conta de serviço precisa de roles/compute.instanceAdmin.v1 e
+# roles/iam.serviceAccountUser e roles/iap.tunnelResourceAccessor. Passo a passo:
+# docs/gcp-identidade-deploy.md
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "deploy = versão da main; rollback = repõe a imagem anterior"
+        type: choice
+        options: [deploy, rollback]
+        default: deploy
+
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      COMPOSE: sudo docker compose --env-file .env -f deploy/docker-compose.free.yml --profile tunnel
+      SSH: gcloud compute ssh ${{ vars.GCP_VM_NAME }} --zone=${{ vars.GCP_ZONE }} --project=${{ vars.GCP_PROJECT }} --tunnel-through-iap --quiet --command
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - name: Enviar código
+        if: inputs.action == 'deploy'
+        run: |
+          tar -cf /tmp/diomika-deploy.tar --exclude=__pycache__ --exclude='*.pyc' \
+            --exclude=backend-api/data --exclude=backend-api/logs \
+            backend-api requirements.txt Dockerfile .dockerignore deploy/docker-compose.free.yml
+          gcloud compute scp /tmp/diomika-deploy.tar deploy/vm/remote_deploy.sh ${{ vars.GCP_VM_NAME }}:/tmp/ --zone=${{ vars.GCP_ZONE }} --project=${{ vars.GCP_PROJECT }} --tunnel-through-iap --quiet
+
+      - name: Build e arranque (recua sozinho se /health/live falhar)
+        if: inputs.action == 'deploy'
+        run: $SSH 'bash /tmp/remote_deploy.sh ${{ vars.VM_APP_DIR }}'
+
+      - name: Repor a imagem anterior
+        if: inputs.action == 'rollback'
+        run: |
+          $SSH "set -euo pipefail; cd ${{ vars.VM_APP_DIR }}
+          TAG=\$(sudo docker images deploy-api --format '{{.Tag}}' | grep '^rollback-' | sort -r | head -1)
+          test -n \"\$TAG\" || { echo 'sem imagem de rollback'; exit 1; }
+          echo a repor deploy-api:\$TAG
+          sudo docker tag deploy-api:\$TAG deploy-api:latest && $COMPOSE up -d --no-build api"
+
+      - name: Verificação pública
+        run: |
+          sleep 10
+          for u in https://api.diomika.com/health/live https://api.diomika.com/health https://www.diomika.com/api/categorias; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -A "Mozilla/5.0 (DiomikaDeployCheck)" "$u")
+            echo "$code $u"; test "$code" = 200
+          done

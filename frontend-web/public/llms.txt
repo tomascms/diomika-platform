@@ -1,0 +1,7 @@
+# Diomika — catálogo B2B têxtil
+# https://www.diomika.com
+
+Site: loja e pedidos de orçamento por categoria/modelo/EAN.
+API pública: https://api.diomika.com/categorias , /catalogo/meta , /catalogo/search?q=
+Contacto: /contacto
+Privacidade: /privacidade

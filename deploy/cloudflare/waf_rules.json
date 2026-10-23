@@ -1,0 +1,42 @@
+{
+  "description": "Diomika — regras WAF/edge",
+  "zone_settings": {
+    "ssl": "strict",
+    "always_use_https": "on",
+    "min_tls_version": "1.2",
+    "security_level": "high",
+    "browser_check": "on"
+  },
+  "firewall_rules": [
+    {
+      "name": "block-empty-ua",
+      "expression": "(http.user_agent eq \"\")",
+      "action": "block",
+      "description": "Bloquear pedidos sem User-Agent"
+    },
+    {
+      "name": "block-admin-system-except-desktop",
+      "expression": "(http.request.uri.path contains \"/admin\" or http.request.uri.path contains \"/system\") and not any(http.request.headers[\"x-diomika-desktop\"][*] eq \"REPLACE_WITH_DIOMIKA_DESKTOP_GATE\")",
+      "action": "block",
+      "description": "Admin/system só via backoffice (header X-Diomika-Desktop)"
+    }
+  ],
+  "rate_limiting_rules": [
+    {
+      "name": "forms-burst-limit",
+      "expression": "(http.host eq \"api.diomika.com\" and http.request.method eq \"POST\" and http.request.uri.path in {\"/contacto\" \"/orcamentos\"})",
+      "characteristics": [
+        "ip"
+      ],
+      "requests": 5,
+      "period_seconds": 10,
+      "action": "block",
+      "mitigation_seconds": 10,
+      "description": "Plano Free: 1 regra, período 10 s. Criada a 2026-10-22."
+    }
+  ],
+  "bot_fight_mode": {
+    "enabled": false,
+    "reason": "No plano Free não tem excepções: bloquearia o backoffice (Electron) e o auto-update, que chamam api.diomika.com fora de um browser."
+  }
+}

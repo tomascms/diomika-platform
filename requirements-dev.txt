@@ -1,0 +1,15 @@
+# Desenvolvimento e CI — NÃO entra na imagem de produção.
+-r requirements.txt
+
+# Testes
+pytest
+pytest-asyncio
+pytest-cov
+vulture
+
+# Segurança / qualidade (CI)
+bandit
+safety
+
+# Carga (deploy/load, load-tests/)
+locust
