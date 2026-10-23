@@ -123,6 +123,16 @@ def relation_options(
     para o formulário agregado (routes/admin_form.py) poder juntar várias
     tabelas numa só resposta, em vez de uma chamada HTTP por relação."""
     limit = min(max(limit, 1), 300)
+    if table_name == "categories" or table_name in all_model_tables():
+        # Mudam raramente; o prefixo admin:merged: é limpo em cada escrita do catálogo.
+        from core.cache import get_or_set
+
+        key = f"admin:merged:options:{table_name}:{int(visible_only)}:{limit}:{id_modelo or ''}"
+        return get_or_set(key, 300.0, lambda: _relation_options_uncached(table_name, visible_only, limit, id_modelo))
+    return _relation_options_uncached(table_name, visible_only, limit, id_modelo)
+
+
+def _relation_options_uncached(table_name: str, visible_only: bool, limit: int, id_modelo: str | None) -> list[dict]:
     query = _scoped(_db_table(table_name).select(relation_options_select_query(table_name)), table_name, use_join=True)
     if visible_only:
         query = query.eq("visibilidade", True)
@@ -177,18 +187,16 @@ def list_relation_options(
     }
 
 
-@router.get("/{table_name}")
-def list_records(
-    request: Request,
+def admin_list_rows(
     table_name: str,
+    *,
     visible_only: bool = False,
     limit: int = 100,
     offset: int = 0,
     id_modelo: str | None = None,
     q: str | None = None,
-):
-    _schema_for(table_name)
-    assert_table_action(table_name, "read", _role(request))
+) -> list[dict]:
+    """Linhas de uma tabela para o backoffice (também usado pelo formulário agregado)."""
     limit = min(max(limit, 1), 200)
     offset = max(offset, 0)
     select_q = admin_list_select_query(table_name, embed_category=table_name in all_product_tables())
@@ -221,7 +229,26 @@ def list_records(
             res = query.limit(limit).offset(offset).execute()
     except Exception:
         res = query.limit(limit).execute()
-    rows = res.data or []
+    return res.data or []
+
+
+@router.get("/{table_name}")
+def list_records(
+    request: Request,
+    table_name: str,
+    visible_only: bool = False,
+    limit: int = 100,
+    offset: int = 0,
+    id_modelo: str | None = None,
+    q: str | None = None,
+):
+    _schema_for(table_name)
+    assert_table_action(table_name, "read", _role(request))
+    limit = min(max(limit, 1), 200)
+    offset = max(offset, 0)
+    rows = admin_list_rows(
+        table_name, visible_only=visible_only, limit=limit, offset=offset, id_modelo=id_modelo, q=q
+    )
     return {"items": rows, "limit": limit, "offset": offset, "count": len(rows)}
 
 

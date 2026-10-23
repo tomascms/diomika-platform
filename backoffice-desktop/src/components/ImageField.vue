@@ -1,16 +1,25 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 const props = defineProps({ modelValue: { type: String, default: '' }, multiple: { type: Boolean, default: false }, disabled: { type: Boolean, default: false } })
 const emit = defineEmits(['update:modelValue', 'file-selected'])
 const displayPath = ref('')
 const previewUrl = ref('')
 const errorMessage = ref('')
 const isUrl = (v) => /^https?:\/\//i.test(v || '')
+// Pré-visualização pela miniatura de 480 px que a API grava no upload (o original pode ter
+// centenas de KB e um modelo tem várias cores). Se faltar, cai no original.
+const thumbFor = (url) =>
+  /\/storage\/v1\/object\/public\//.test(url) && !/\.(gif|svg)$/i.test(url.split('?')[0]) && !/\.w\d+\.webp$/.test(url)
+    ? `${url.split('?')[0]}.w480.webp`
+    : url
+const onPreviewError = () => {
+  if (isUrl(props.modelValue) && previewUrl.value !== props.modelValue) previewUrl.value = props.modelValue
+}
 const isSignedUrl = computed(() => String(props.modelValue || '').includes('/object/sign/'))
 const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 const allowedExtension = /\.(jpe?g|png|webp|gif)$/i
 watch(() => props.modelValue, (v) => {
-  if (isUrl(v)) { displayPath.value = 'Imagem carregada'; previewUrl.value = v }
+  if (isUrl(v)) { displayPath.value = 'Imagem carregada'; previewUrl.value = thumbFor(v) }
   else { displayPath.value = v || ''; if (!v || !previewUrl.value?.startsWith('blob:')) previewUrl.value = '' }
 }, { immediate: true })
 const pickLabel = computed(() => (props.multiple ? 'Escolher ficheiros…' : 'Escolher ficheiro…'))
@@ -34,6 +43,9 @@ const onPick = (e) => {
   }
   e.target.value = ''
 }
+onBeforeUnmount(() => {
+  if (previewUrl.value?.startsWith('blob:')) URL.revokeObjectURL(previewUrl.value)
+})
 </script>
 <template>
   <div class="image-field">
@@ -43,7 +55,7 @@ const onPick = (e) => {
     </div>
     <p v-if="errorMessage" class="field-error" role="alert">{{ errorMessage }}</p>
     <p v-if="isSignedUrl" class="field-warning">Não grave URLs assinadas — use upload ou path do storage</p>
-    <img v-if="previewUrl" :src="previewUrl" alt="" class="thumb" />
+    <img v-if="previewUrl" :src="previewUrl" alt="" class="thumb" loading="lazy" decoding="async" @error="onPreviewError" />
   </div>
 </template>
 <style scoped>

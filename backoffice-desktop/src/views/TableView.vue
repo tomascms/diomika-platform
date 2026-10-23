@@ -3,7 +3,7 @@ defineOptions({ name: 'TableView' })
 
 import { ref, computed, watch, onMounted, onActivated } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { api } from '@/lib/api'
+import { api, dataVersion } from '@/lib/api'
 import { useWorkspace } from '@/composables/useWorkspace'
 import { useAggregatedTipos } from '@/composables/useAggregatedTipos'
 import DataList from '@/components/DataList.vue'
@@ -34,8 +34,12 @@ const listOffset = ref(0)
 const hasMore = ref(false)
 const totalApprox = ref(null)
 let loadSeq = 0
+let loadedVersion = -1
 
-const table = computed(() => route.params.table)
+// Fixa por instância: cada tabela tem a sua TableView (KeepAlive com :key=table). Ler a rota
+// fazia a lista em fundo recarregar com a tabela do registo aberto (e perder os filtros).
+const initialTable = route.params.table
+const table = computed(() => initialTable)
 const isCategories = computed(() => table.value === 'categories')
 const cfg = computed(() => tableConfig(table.value) || workspace.value?.sidebar?.[table.value])
 const isMerged = computed(() => {
@@ -130,10 +134,13 @@ const selectedCategory = computed(() =>
 
 const isAggregatedCategory = computed(() => Boolean(getAggregatedTiposForCategory(selectedCategory.value)))
 
-const loadRows = async ({ append = false } = {}) => {
+const loadRows = async ({ append = false, soft = false } = {}) => {
   const seq = ++loadSeq
+  loadedVersion = dataVersion.value
+  // soft: recarregar em fundo ao voltar à lista (sem esqueleto e sem perder o que já estava carregado).
+  const keep = soft ? Math.min(Math.max(rows.value.length, PAGE_SIZE), 200) : PAGE_SIZE
   if (append) loadingMore.value = true
-  else {
+  else if (!soft) {
     loading.value = true
     listOffset.value = 0
     hasMore.value = false
@@ -146,7 +153,7 @@ const loadRows = async ({ append = false } = {}) => {
       const offset = append ? listOffset.value : 0
       const page = await api.mergedList(viewKey, {
         ...mergedListParams.value,
-        limit: String(PAGE_SIZE),
+        limit: String(append ? PAGE_SIZE : keep),
         offset: String(offset),
       })
       if (seq !== loadSeq) return
@@ -154,14 +161,14 @@ const loadRows = async ({ append = false } = {}) => {
       rows.value = append ? [...rows.value, ...items] : items
       listOffset.value = offset + items.length
       totalApprox.value = page.total_approx ?? null
-      hasMore.value = items.length >= PAGE_SIZE && (
+      hasMore.value = items.length >= (append ? PAGE_SIZE : keep) && (
         totalApprox.value == null || listOffset.value < totalApprox.value
       )
     } else {
       const offset = append ? listOffset.value : 0
       const params = {
         visible_only: 'false',
-        limit: String(PAGE_SIZE),
+        limit: String(append ? PAGE_SIZE : keep),
         offset: String(offset),
       }
       const q = filterText.value.trim()
@@ -171,7 +178,7 @@ const loadRows = async ({ append = false } = {}) => {
       const items = page.items || []
       rows.value = append ? [...rows.value, ...items] : items
       listOffset.value = offset + items.length
-      hasMore.value = items.length >= PAGE_SIZE
+      hasMore.value = items.length >= (append ? PAGE_SIZE : keep)
     }
   } catch (e) {
     if (seq !== loadSeq) return
@@ -391,6 +398,7 @@ onMounted(() => {
 
 onActivated(() => {
   void ensureCategories()
+  if (dataVersion.value !== loadedVersion) void loadRows({ soft: true })
 })
 </script>
 

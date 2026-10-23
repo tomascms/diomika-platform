@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import Any
 
@@ -15,6 +16,9 @@ from paths import BACKEND_ROOT
 logger = logging.getLogger("diomika-audit")
 
 _LOG_FILE = BACKEND_ROOT / "logs" / "admin_audit.jsonl"
+# A escrita na BD (VM nos EUA → Supabase na Irlanda, ~150 ms) saía do tempo de resposta de cada
+# escrita do backoffice. 1 thread mantém a ordem; à saída o Python espera pelas pendentes.
+_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="audit")
 
 
 def _safe_detail(detail: dict[str, Any] | None) -> dict[str, Any]:
@@ -55,21 +59,15 @@ def log_admin_action(
         "client_ip": client_ip,
         "detail": _safe_detail(detail),
     }
+    _EXECUTOR.submit(_write, payload)
+
+
+def _write(payload: dict[str, Any]) -> None:
+    row = {k: payload[k] for k in ("action", "resource", "resource_id", "role", "actor", "request_id", "client_ip", "detail")}
     try:
-        get_db().table("admin_audit_log").insert(
-            {
-                "action": action,
-                "resource": resource,
-                "resource_id": resource_id,
-                "role": role,
-                "actor": actor,
-                "request_id": request_id,
-                "client_ip": client_ip,
-                "detail": payload["detail"],
-            }
-        ).execute()
+        get_db().table("admin_audit_log").insert(row).execute()
     except Exception as exc:
-        logger.debug("audit DB skip: %s", exc)
+        logger.warning("audit: BD indisponível, registado em ficheiro (%s)", exc)
         try:
             _LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
             with _LOG_FILE.open("a", encoding="utf-8") as fh:

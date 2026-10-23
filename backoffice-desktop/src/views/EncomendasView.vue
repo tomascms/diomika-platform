@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { api } from '@/lib/api'
+import { useAutoRefresh } from '@/composables/useAutoRefresh'
 import DataList from '@/components/DataList.vue'
 import OrderCreateView from '@/views/OrderCreateView.vue'
 import OrderRecordPanel from '@/components/OrderRecordPanel.vue'
@@ -17,8 +18,8 @@ const columns = [
   { key: 'created_at', label: 'Data', format: (r) => (r.created_at || '').slice(0, 10) },
 ]
 
-const load = async () => {
-  loading.value = true
+const load = async ({ soft = false } = {}) => {
+  if (!soft) loading.value = true
   error.value = ''
   try {
     rows.value = await api.listRecords('encomendas_internas', { visible_only: 'false' })
@@ -74,6 +75,7 @@ const showNewForm = () => {
 }
 
 onMounted(load)
+useAutoRefresh(() => load({ soft: true }))
 </script>
 
 <template>

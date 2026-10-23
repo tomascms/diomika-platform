@@ -1,3 +1,4 @@
+import { ref } from 'vue'
 import { loadSettings, clearSession, mapApiError } from './settings'
 
 const TIMEOUT_MS = 30000
@@ -9,6 +10,12 @@ const ME_TTL_MS = 10 * 60 * 1000
 // repetem sozinhas — um POST que chegou ao servidor não pode ser duplicado.
 const READ_RETRY_DELAYS_MS = [400, 1200]
 const RETRYABLE_STATUS = new Set([502, 503, 504])
+
+/**
+ * Sobe a cada escrita bem-sucedida. As listas mantidas em memória (KeepAlive) comparam-na
+ * quando voltam a aparecer e recarregam — antes mostravam dados antigos depois de editar.
+ */
+export const dataVersion = ref(0)
 
 /** Disparado quando a API recusa a sessão — o router leva para o login. */
 export const UNAUTHORIZED_EVENT = 'diomika:unauthorized'
@@ -132,7 +139,11 @@ async function request(method, path, { body, params, headers: extraHeaders } = {
 
   const promise = (async () => {
     try {
-      if (method !== 'GET') return await fetchOnce(method, url, path, { body, headers: extraHeaders })
+      if (method !== 'GET') {
+        const result = await fetchOnce(method, url, path, { body, headers: extraHeaders })
+        dataVersion.value += 1
+        return result
+      }
       for (let attempt = 0; ; attempt += 1) {
         try {
           return await fetchOnce(method, url, path, { body, headers: extraHeaders })
@@ -187,7 +198,9 @@ async function postForm(path, file) {
       const err = await resp.json().catch(() => ({}))
       throw new ApiError(parseDetail(err, resp.status), resp.status)
     }
-    return resp.json()
+    const result = await resp.json()
+    dataVersion.value += 1
+    return result
   } finally {
     clearTimeout(timer)
   }

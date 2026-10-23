@@ -100,3 +100,4 @@ monitor-hub/ui/preview.html
 .local-previews/
 deploy/_*.sql
 deploy/generated_*.sql.coverage
+.claude/

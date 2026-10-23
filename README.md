@@ -137,7 +137,7 @@ O `.env` da raiz é de **produção** (ver [`.env.example`](.env.example)); os t
 ## Documentação
 - [Runbook](docs/runbook.md) — deploy, rollback, backups, chaves, incidentes
 - [CHANGELOG](CHANGELOG.md)
-- [Auditoria RNF](docs/auditoria-rnf-2026-10-22.md) · [Matriz de conformidade](docs/conformidade-rnf.md)
+- [Auditoria RNF](docs/auditoria-rnf-2026-10-22.md) · [Matriz de conformidade](docs/conformidade-rnf.md) · [Auditoria do backoffice](docs/auditoria-backoffice.md)
 - [Guia do cliente (backoffice)](docs/guia-cliente.md) · [Adicionar família de produto](docs/adicionar-familia.md)
 - [Base de dados](db/README.md) · [Scripts de operação](deploy/README.md)
 

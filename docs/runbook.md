@@ -53,6 +53,9 @@ verificar o site live (secção 6).
   `backoffice-vX.Y.Z` (ou Actions → *Backoffice release* → Run workflow).
 - **Publicar a actualização automática:** descarregar os artefactos do run e
   `python deploy/publish_backoffice_update.py --extra-dir <pasta>`.
+- **Sem GitHub Actions (Windows):** em `backoffice-desktop/`, `npm run dist:win` (lê o gate do
+  `.env`) e depois `python deploy/publish_backoffice_update.py`. O script envia o instalador antes
+  do `latest.yml` e confirma o feed; os PCs actualizam-se sozinhos no arranque.
 - **Utilizadores:** guardados em `backend-api/data/admin_users.json` na VM. O utilizador inicial
   vem de `ADMIN_BOOTSTRAP_USER` / `ADMIN_BOOTSTRAP_PASSWORD`.
 - **Família de produto nova:** [adicionar-familia.md](adicionar-familia.md).

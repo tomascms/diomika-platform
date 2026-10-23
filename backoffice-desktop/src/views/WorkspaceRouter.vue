@@ -1,7 +1,7 @@
 <script setup>
 defineOptions({ name: 'WorkspaceRouter' })
 
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useWorkspace } from '@/composables/useWorkspace'
 import TableView from '@/views/TableView.vue'
@@ -12,7 +12,15 @@ import ContactView from '@/views/ContactView.vue'
 const route = useRoute()
 const { workspace } = useWorkspace()
 
-const table = computed(() => route.params.table)
+// Só segue a rota enquanto está numa lista: ao abrir um registo esta vista fica guardada
+// (KeepAlive) e não deve criar uma lista nova para a tabela física do registo.
+const table = ref(route.params.table)
+watch(
+  () => [route.name, route.params.table],
+  ([name, next]) => {
+    if (name === 'workspace' && next) table.value = next
+  },
+)
 const uiMode = computed(() => workspace.value?.sidebar?.[table.value]?.ui_mode || 'table')
 
 const component = computed(() => {

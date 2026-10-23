@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { api } from '@/lib/api'
+import { useAutoRefresh } from '@/composables/useAutoRefresh'
 import DataList from '@/components/DataList.vue'
 import OrderRecordPanel from '@/components/OrderRecordPanel.vue'
 
@@ -15,8 +16,8 @@ const columns = [
   { key: 'email', label: 'Email' },
 ]
 
-const load = async () => {
-  loading.value = true
+const load = async ({ soft = false } = {}) => {
+  if (!soft) loading.value = true
   error.value = ''
   try {
     rows.value = await api.listRecords('pedidos_orcamento', { visible_only: 'false' })
@@ -69,6 +70,7 @@ const deleteRow = async (row) => {
 }
 
 onMounted(load)
+useAutoRefresh(() => load({ soft: true }), 60000)
 </script>
 
 <template>

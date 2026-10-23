@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { api } from '@/lib/api'
+import { useAutoRefresh } from '@/composables/useAutoRefresh'
 import DataList from '@/components/DataList.vue'
 import ConversationPanel from '@/components/ConversationPanel.vue'
 
@@ -12,8 +13,8 @@ const message = ref('')
 
 const columns = [{ key: 'email', label: 'Email' }]
 
-const load = async () => {
-  loading.value = true
+const load = async ({ soft = false } = {}) => {
+  if (!soft) loading.value = true
   error.value = ''
   try {
     rows.value = await api.listContact()
@@ -67,6 +68,7 @@ const deleteMsg = async (row) => {
 }
 
 onMounted(load)
+useAutoRefresh(() => load({ soft: true }), 60000)
 </script>
 
 <template>

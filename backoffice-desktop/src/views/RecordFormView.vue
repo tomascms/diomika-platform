@@ -35,6 +35,8 @@ const categoryRows = ref([])
 const familyTipo = ref('')
 const bundleProductTable = ref(null)
 const bundleColorsTable = ref(null)
+// Cores e EAN do modelo já vindos no /admin/form (os painéis não os pedem outra vez).
+const bundleChildren = ref(null)
 let switchingSchema = false
 /** Campos a repor após mudar categoria/família (novo registo). */
 let formCarry = null
@@ -48,6 +50,9 @@ const colorsTable = computed(() => schema.value?.config?.ui_colors_table || null
 const savedModelId = computed(() => (isNew.value ? null : String(recordId.value)))
 const isCatalogRecord = computed(() => Boolean(schema.value?.config?.ui_catalog_tipo || colorsTable.value))
 const isPublished = computed(() => formData.value.visibilidade === true)
+// Registo já na loja: «Guardar alterações» mantém-no visível; «Publicar» deixa de fazer sentido.
+const isLiveRecord = computed(() => !isNew.value && isPublished.value)
+const saveLabel = computed(() => (isLiveRecord.value ? 'Guardar alterações' : 'Guardar rascunho'))
 const isModelForm = computed(() =>
   catalogTypes.value.some((t) => t.model_table === table.value),
 )
@@ -57,7 +62,15 @@ const isProductForm = computed(() =>
 
 const productTableForModel = computed(() => bundleProductTable.value)
 
-const storefrontCheck = ref(null)
+// Calculado do que os painéis já carregaram — antes eram mais 2 pedidos a cada abertura/gravação.
+const storefrontCheck = computed(() => {
+  if (!isModelForm.value || isNew.value || !colorsPanel.value || !variantsPanel.value) return null
+  return {
+    withEan: variantsPanel.value.savedWithEan,
+    withColorImg: colorsPanel.value.savedWithImage,
+    published: formData.value.visibilidade === true,
+  }
+})
 
 const storefrontIssues = computed(() => {
   const s = storefrontCheck.value
@@ -80,25 +93,6 @@ const storefrontIssues = computed(() => {
   }
   return issues
 })
-
-const loadStorefrontCheck = async () => {
-  storefrontCheck.value = null
-  if (!isModelForm.value || isNew.value || !recordId.value) return
-  if (!bundleProductTable.value || !bundleColorsTable.value) return
-  try {
-    const [products, colors] = await Promise.all([
-      api.listRecords(bundleProductTable.value, { id_modelo: recordId.value, limit: '50' }),
-      api.listModelColors(bundleColorsTable.value, recordId.value),
-    ])
-    storefrontCheck.value = {
-      withEan: products.filter((p) => String(p.ean || '').trim()).length,
-      withColorImg: colors.filter((c) => String(c.imagem || '').trim()).length,
-      published: formData.value.visibilidade === true,
-    }
-  } catch {
-    storefrontCheck.value = null
-  }
-}
 
 const title = computed(() =>
   isNew.value ? `Novo — ${schema.value?.label || table.value}` : `Editar — ${schema.value?.label || table.value}`,
@@ -266,6 +260,7 @@ const load = async () => {
     fieldOptions.value = bundleData.field_options || {}
     bundleProductTable.value = bundleData.product_table || null
     bundleColorsTable.value = bundleData.colors_table || null
+    bundleChildren.value = bundleData.children || null
 
     const record = bundleData.record
     if (record) {
@@ -288,7 +283,6 @@ const load = async () => {
       }
     }
     familyTipo.value = schemaData?.config?.ui_catalog_tipo || catalogTipo.value || ''
-    await loadStorefrontCheck()
   } catch (e) {
     if (seq === loadSeq) error.value = e.message
   } finally {
@@ -319,8 +313,8 @@ const resolvePendingImages = async (payload) => {
   return out
 }
 
-const preparePayload = async () => {
-  let payload = { ...formData.value, visibilidade: false }
+const preparePayload = async (visible) => {
+  let payload = { ...formData.value, visibilidade: visible }
   payload = await resolvePendingImages(payload)
   if (typeof payload.composicao === 'string') {
     try {
@@ -344,8 +338,10 @@ const saveDraft = async () => {
   if (isNew.value && !createIdempotencyKey.value) {
     createIdempotencyKey.value = crypto.randomUUID()
   }
+  // Num registo já publicado, gravar mantém-no na loja (antes escondia-o, com cores e EAN).
+  const keepLive = !isNew.value && isPublished.value
   try {
-    const payload = await preparePayload()
+    const payload = await preparePayload(keepLive)
     let savedId = recordId.value
     if (isNew.value) {
       const created = await api.createRecord(table.value, payload, createIdempotencyKey.value)
@@ -356,7 +352,7 @@ const saveDraft = async () => {
 
     if (embedColors.value && colorsPanel.value) {
       try {
-        await colorsPanel.value.save(String(savedId), { publish: false })
+        await colorsPanel.value.save(String(savedId), { visible: keepLive })
       } catch (e) {
         message.value = `Rascunho guardado, mas cores: ${e.message}`
         saving.value = false
@@ -366,7 +362,7 @@ const saveDraft = async () => {
     }
     if (embedColors.value && variantsPanel.value) {
       try {
-        await variantsPanel.value.save(String(savedId), { publish: false })
+        await variantsPanel.value.save(String(savedId), { visible: keepLive })
       } catch (e) {
         message.value = `Rascunho guardado, mas produtos: ${e.message}`
         saving.value = false
@@ -375,10 +371,9 @@ const saveDraft = async () => {
       }
     }
 
-    formData.value.visibilidade = false
-    message.value = 'Rascunho guardado (oculto na loja).'
+    formData.value.visibilidade = keepLive
+    message.value = keepLive ? 'Alterações guardadas (continua visível na loja).' : 'Rascunho guardado (oculto na loja).'
     if (isNew.value && savedId) await goToEdit(savedId)
-    await loadStorefrontCheck()
   } catch (e) {
     error.value = e.message || 'Não foi possível guardar o rascunho.'
   } finally {
@@ -398,19 +393,21 @@ const publish = async () => {
   if (isNew.value && !createIdempotencyKey.value) {
     createIdempotencyKey.value = crypto.randomUUID()
   }
+  // Já publicado: fica visível durante a gravação (antes era escondido e voltava no fim).
+  const wasLive = !isNew.value && isPublished.value
   try {
-    const payload = await preparePayload()
+    const payload = await preparePayload(wasLive)
     let savedId = recordId.value
     if (isNew.value) {
       const created = await api.createRecord(table.value, payload, createIdempotencyKey.value)
       savedId = created.id
     } else {
-      await api.updateRecord(table.value, recordId.value, { ...payload, visibilidade: false })
+      await api.updateRecord(table.value, recordId.value, payload)
     }
 
     if (embedColors.value && colorsPanel.value) {
       try {
-        await colorsPanel.value.save(String(savedId), { publish: true })
+        await colorsPanel.value.save(String(savedId), { visible: true, requireRows: true })
       } catch (e) {
         message.value = `Dados guardados, mas cores: ${e.message}`
         saving.value = false
@@ -420,7 +417,7 @@ const publish = async () => {
     }
     if (embedColors.value && variantsPanel.value) {
       try {
-        await variantsPanel.value.save(String(savedId), { publish: true })
+        await variantsPanel.value.save(String(savedId), { visible: true, requireRows: true })
       } catch (e) {
         message.value = `Dados guardados, mas produtos: ${e.message}`
         saving.value = false
@@ -438,7 +435,6 @@ const publish = async () => {
     formData.value.visibilidade = true
     message.value = 'Publicado. Pode criar outro sem voltar atrás.'
     if (isNew.value && savedId) await goToEdit(savedId)
-    await loadStorefrontCheck()
   } catch (e) {
     const msg = e.message || ''
     if (isNew.value && /502|504|timeout|abort|inacessível/i.test(msg)) {
@@ -533,15 +529,16 @@ watch(() => route.fullPath, load, { immediate: true })
       </span>
       <button
         v-if="!loading && schema"
-        class="btn btn-ghost header-save"
+        class="btn header-save"
+        :class="isLiveRecord ? 'btn-primary' : 'btn-ghost'"
         type="button"
         :disabled="saving"
         @click="saveDraft"
       >
-        {{ saving ? 'A guardar…' : 'Guardar rascunho' }}
+        {{ saving ? 'A guardar…' : saveLabel }}
       </button>
       <button
-        v-if="!loading && schema"
+        v-if="!loading && schema && !isLiveRecord"
         class="btn btn-primary"
         type="button"
         :disabled="saving"
@@ -601,18 +598,27 @@ watch(() => route.fullPath, load, { immediate: true })
         ref="colorsPanel"
         :model-id="savedModelId"
         :colors-table="colorsTable"
+        :initial-rows="bundleChildren?.colors || null"
       />
       <ModelVariantsPanel
         v-if="embedColors"
         ref="variantsPanel"
         :model-id="savedModelId"
         :product-table="productTableForModel"
+        :initial-rows="bundleChildren?.variants || null"
+        :variant-fields="bundleChildren?.variant_fields || null"
       />
       <div class="actions">
-        <button class="btn btn-ghost" type="button" :disabled="saving" @click="saveDraft">
-          {{ saving ? 'A guardar…' : 'Guardar rascunho' }}
+        <button
+          class="btn"
+          :class="isLiveRecord ? 'btn-primary' : 'btn-ghost'"
+          type="button"
+          :disabled="saving"
+          @click="saveDraft"
+        >
+          {{ saving ? 'A guardar…' : saveLabel }}
         </button>
-        <button class="btn btn-primary" type="button" :disabled="saving" @click="publish">
+        <button v-if="!isLiveRecord" class="btn btn-primary" type="button" :disabled="saving" @click="publish">
           {{ saving ? 'A publicar…' : 'Publicar na loja' }}
         </button>
         <button

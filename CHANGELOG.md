@@ -3,6 +3,14 @@
 Versão única do ecossistema em `backend-api/core/version.py`. Backoffice com versão própria
 em `backoffice-desktop/package.json`.
 
+## Backoffice 1.3.0 — 2026-10-23 (auditoria: [docs/auditoria-backoffice.md](docs/auditoria-backoffice.md))
+- «Guardar» num produto publicado já não o tira da loja; «Publicar» já não o esconde durante a gravação.
+- Mensagens, pedidos e encomendas actualizam-se sozinhos; listas não mostram dados antigos depois de editar.
+- Abrir um modelo: 1 pedido (antes 2 vagas); gravar envia só as linhas alteradas.
+- Pré-visualizações com miniaturas; respostas comprimidas; links externos só http(s)/mailto.
+- API: auditoria fora do pedido, formulário agregado em paralelo com cores e EAN, opções em cache,
+  sessões persistentes (Redis com AOF).
+
 ## [Por versionar] — 2026-10-22/23 (em produção: loja `f314882`, API `aa8a9b0`)
 
 ### Desempenho (medido em produção, telemóvel)

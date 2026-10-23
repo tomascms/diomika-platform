@@ -18,7 +18,11 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     logging: *logging
-    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
+    # AOF num volume: as sessões do backoffice sobrevivem a deploys/reinícios (antes: todos
+    # tinham de voltar a entrar). A cache do catálogo é limpa no arranque da API.
+    command: ["redis-server", "--save", "", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis-data:/data
     # Só localhost na VM — rate-limit / não expor
     ports:
       - "127.0.0.1:6379:6379"
@@ -77,3 +81,6 @@ services:
     depends_on:
       api:
         condition: service_healthy
+
+volumes:
+  redis-data:

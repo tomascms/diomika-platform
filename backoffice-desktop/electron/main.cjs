@@ -108,7 +108,7 @@ function proxyToApi(req, res) {
     redirect: 'follow',
   })
 
-  upstream.setHeader('accept-encoding', 'identity')
+  // Sem forçar 'identity': o electron.net pede gzip/br e descomprime sozinho (listas ~8× menores).
   upstream.setHeader('user-agent', 'DiomikaBackoffice/1.0')
   upstream.setHeader('accept', 'application/json')
   if (DESKTOP_GATE) upstream.setHeader('x-diomika-desktop', DESKTOP_GATE)
@@ -253,12 +253,22 @@ async function createWindow() {
     if (mainWindow === win) mainWindow = null
   })
 
+  // Links externos vão para o browser do sistema, só http(s)/mailto: a app mostra conteúdo
+  // de clientes (mensagens) e openExternal com outros protocolos (file:, ms-…) abre programas locais.
+  const openSafely = (url) => {
+    if (/^(https?:|mailto:)/i.test(url)) shell.openExternal(url)
+  }
+  const isAppUrl = (url) => url.startsWith('http://127.0.0.1') || url.startsWith('http://localhost')
+
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('http://127.0.0.1') || url.startsWith('http://localhost')) {
-      return { action: 'deny' }
-    }
-    shell.openExternal(url)
+    if (!isAppUrl(url)) openSafely(url)
     return { action: 'deny' }
+  })
+  // Um link sem target=_blank levava a própria janela da app para outro site.
+  win.webContents.on('will-navigate', (event, url) => {
+    if (isAppUrl(url)) return
+    event.preventDefault()
+    openSafely(url)
   })
 
   if (isDev) {

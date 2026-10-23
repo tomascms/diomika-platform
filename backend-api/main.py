@@ -85,8 +85,12 @@ async def lifespan(app: FastAPI):
     # Migrações são agora ficheiros SQL versionados em db/migrations/,
     # aplicados manualmente no Supabase SQL Editor (ver o RUNBOOK em sql/),
     # nunca automaticamente aqui.
+    from core.cache import invalidate_prefix
     from core.cache_warmup import warm_catalog_cache
 
+    # O Redis persiste (sessões); dados de catálogo de uma versão anterior da API não.
+    for prefix in ("catalog:", "categories:", "admin:merged:"):
+        await asyncio.to_thread(invalidate_prefix, prefix)
     await asyncio.to_thread(warm_catalog_cache)
     if settings.is_production:
         from core.cache_warmup import warm_model_details_in_background
