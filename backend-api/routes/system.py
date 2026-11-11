@@ -103,7 +103,6 @@ def categories_available_tipos():
 @router.get("/order-picker/{category_id}", dependencies=[Depends(require_pedidos)])
 def order_picker_for_category(category_id: UuidStr):
     """Dados para criar linhas de encomenda — genérico por tipo de catálogo."""
-    from models.catalog_attributes import quantity_rules
     from models.catalog_registry import CATALOG_TYPES, storefront_mode_for_tipo, tipo_label
     from models.schemas import PRODUCT_MODEL_COLORS_TABLE, PRODUCT_MODELS_TABLE, PRODUCT_VARIANTS_TABLE, aggregated_tipos_for_tipo
 
@@ -116,7 +115,8 @@ def order_picker_for_category(category_id: UuidStr):
     if not tipo or (tipo not in CATALOG_TYPES and not aggregated):
         raise HTTPException(status_code=400, detail="Categoria sem tipo de catálogo válido")
 
-    step, min_q = quantity_rules(cat)
+    step = cat.get("carrinho_step") or 6
+    min_q = cat.get("carrinho_min") or step
     db = get_db()
 
     def _assento_lines(physical: str) -> list[dict]:
@@ -183,18 +183,13 @@ def order_picker_for_category(category_id: UuidStr):
                     if (p.get("attributes") or {}).get("altura")
                 ] or ((m.get("attributes") or {}).get("alturas") or []),
                 "cores": cores_by_model.get(mid, []),
-                **_rules(m),
             })
         return lines
-
-    def _rules(model: dict) -> dict:
-        s, m = quantity_rules(cat, model.get("attributes"))
-        return {"carrinho_step": s, "carrinho_min": m}
 
     def _variant_products(physical: str) -> list[dict]:
         models = (
             db.table(PRODUCT_MODELS_TABLE)
-            .select("id, nome, attributes")
+            .select("id, nome")
             .eq("id_categoria", category_id)
             .eq("tipo_catalogo", physical)
             .eq("visibilidade", True)
@@ -242,7 +237,6 @@ def order_picker_for_category(category_id: UuidStr):
                     "modelo_nome": modelo.get("nome") or "",
                     "familia": family,
                     "cores": cores_map.get(mid, []),
-                    **_rules(modelo),
                 }
             )
         return enriched

@@ -82,7 +82,7 @@ flowchart LR
   mostra só os campos que essa combinação exige (gerados a partir do esquema da API).
 
 **Qualidade**
-- 630 testes de backend (isolados: nunca tocam em produção), cobertura com mínimo no CI;
+- Mais de 600 testes de backend (isolados: nunca tocam em produção), cobertura com mínimo no CI;
   testes de regressão para cada defeito corrigido (ex.: o event loop não pode bloquear durante
   um envio de formulário).
 - Esquema de catálogo unificado e orientado a dados: uma família de produto nova é **uma entrada

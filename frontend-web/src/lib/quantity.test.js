@@ -5,7 +5,6 @@ import {
   boxNote,
   isValidCartQty,
   MAX_QTY,
-  modelQtyRules,
   normalizeQuantity,
   resolveCartQtyRules,
 } from './quantity.js'
@@ -135,11 +134,4 @@ test('isValidCartQty: mínimo, múltiplo do passo e até 6000', () => {
   for (const q of [12, 24, 240, 6000]) assert.equal(isValidCartQty(q, category), true, String(q))
   for (const q of [0, 6, 13, 6012, 7000, NaN])
     assert.equal(isValidCartQty(q, category), false, String(q))
-})
-
-test('modelQtyRules: o incremento do modelo é passo e mínimo; sem ele, o da categoria', () => {
-  const cat = { carrinho_step: 6, carrinho_min: 6 }
-  assert.deepEqual(modelQtyRules({ incremento: 12 }, cat), { step: 12, min: 12 })
-  assert.deepEqual(modelQtyRules({}, cat), { step: 6, min: 6 })
-  assert.deepEqual(modelQtyRules(null, null), { step: 6, min: 6 })
 })

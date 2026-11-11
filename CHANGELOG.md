@@ -3,10 +3,14 @@
 Versão única do ecossistema em `backend-api/core/version.py`. Backoffice com versão própria
 em `backoffice-desktop/package.json`.
 
+## Backoffice 1.5.13 — 2026-11-11
+
+- «Quantidade mínima» passa a ser da categoria (formulário da categoria) e é também o passo do pedido: 12 → 12, 24, 36…. Sai o «Incremento» do formulário do modelo; a loja, a API e as encomendas internas seguem a categoria.
+
 ## Backoffice 1.5.12 — 2026-11-11
 
 - Regional: em «Novo registo» escolhe-se a subcategoria (avental, luva, pega, pano, toalha, protetor) antes de abrir o formulário, como no Material de Cozinha.
-- Formulário do modelo: o campo «Incremento» e as dimensões (Regional) aparecem; estavam escondidos por serem opcionais.
+- Formulário do modelo: as dimensões (Regional) aparecem; estavam escondidos por serem opcionais.
 
 ## Backoffice 1.5.11 — 2026-11-10
 - Etiqueta: a etiqueta inteira é agora uma só imagem a 300 DPI do tamanho da área imprimível da fita de 29 mm (QR da loja, logo, legenda em uma ou duas linhas, EAN-13, QR do produto e «Fabricado em …»). Antes o logo saía quatro vezes maior e os QR cresciam com o link e saíam da fita.

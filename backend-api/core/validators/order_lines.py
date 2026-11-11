@@ -6,7 +6,6 @@ from fastapi import HTTPException
 
 from core.cqrs.queries.assentos_catalog import assento_model_detail
 from core.database import get_db
-from models.catalog_attributes import quantity_rules
 from models.catalog_registry import storefront_mode_for_tipo
 
 
@@ -19,7 +18,7 @@ def _load_products_by_ean(eans: list[str]) -> tuple[dict[str, dict], dict[str, s
         .table("product_variants")
         .select(
             "ean, id_modelo, tipo_catalogo, attributes, "
-            "product_models(id_categoria, attributes, categories(carrinho_step, carrinho_min))"
+            "product_models(id_categoria, categories(carrinho_step, carrinho_min))"
         )
         .in_("ean", eans)
         .execute()
@@ -35,7 +34,6 @@ def _load_products_by_ean(eans: list[str]) -> tuple[dict[str, dict], dict[str, s
         row = dict(row)
         row["categories"] = modelo.get("categories") or {}
         row["id_categoria"] = modelo.get("id_categoria")
-        row["model_attributes"] = modelo.get("attributes") or {}
         row["altura"] = (row.get("attributes") or {}).get("altura")
         by_ean[row["ean"]] = row
         product_tipo[row["ean"]] = row.get("tipo_catalogo")
@@ -87,7 +85,8 @@ def validate_order_lines(linhas) -> None:
             cat = cat[0]
         if not isinstance(cat, dict):
             cat = {}
-        step, min_q = quantity_rules(cat, row.get("model_attributes"))
+        step = cat.get("carrinho_step") or 6
+        min_q = cat.get("carrinho_min") or step
         if step and linha.quantidade % step != 0:
             raise HTTPException(status_code=400, detail=f"Quantidade para {linha.ean} deve ser múltiplo de {step}.")
         if min_q and linha.quantidade < min_q:

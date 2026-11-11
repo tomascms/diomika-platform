@@ -93,8 +93,11 @@ class Categoria(BaseModel):
     descricao: str = Field(default="", description="Descrição (aparece na página da categoria)")  # RP-08
     imagem: str = Field(..., description="URL da imagem")
     visibilidade: bool = Field(default=False)
-    carrinho_step: Optional[int] = Field(default=None, description="Passo quantidade (ex: 6 ou 12). Predefinido pelo tipo.")
-    carrinho_min: Optional[int] = Field(default=None, description="Quantidade mínima por linha no carrinho")
+    # Uma só regra para o cliente: a quantidade mínima é também o passo (12 → 12, 24, 36…).
+    carrinho_step: Optional[int] = Field(default=None, json_schema_extra={"ui_hidden": True})
+    carrinho_min: Optional[int] = Field(
+        default=None, ge=1, description="Encomenda-se em múltiplos desta quantidade (12 → 12, 24, 36…)."
+    )
 
     @model_validator(mode="after")
     def set_slug_and_cart_rules(self) -> "Categoria":
@@ -118,6 +121,7 @@ class Categoria(BaseModel):
             self.carrinho_step = int((definition or {}).get("carrinho_step") or 6)
         if self.carrinho_min is None:
             self.carrinho_min = int((definition or {}).get("carrinho_min") or self.carrinho_step)
+        self.carrinho_step = self.carrinho_min
         return self
 
 

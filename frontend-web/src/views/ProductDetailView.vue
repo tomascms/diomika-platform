@@ -4,8 +4,7 @@ import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { resolveImageUrls, PLACEHOLDER } from '@/lib/images'
 import SoftImage from '@/components/SoftImage.vue'
 import { setNoindex, watchDynamicTitle } from '@/composables/usePageMeta'
-import { useCart } from '@/composables/useCart'
-import { modelQtyRules } from '@/lib/quantity'
+import { useCart, resolveCartQtyRules } from '@/composables/useCart'
 import { useWhatsAppMessage } from '@/composables/useWhatsAppMessage'
 import { MIN_ORCAMENTO_MSG, SITE_ORIGIN } from '@/lib/constants'
 import { describeModel, modelMeta, pickerNoun, pretty, realDescription } from '@/lib/describe'
@@ -45,8 +44,8 @@ const addedMsg = ref('')
 const lightboxOpen = ref(false)
 
 const singleProductMode = computed(() => isSingleProductMode(storefrontCtx.value))
-const qtyStep = computed(() => modelQtyRules(model.value, category.value).step)
-const qtyMin = computed(() => modelQtyRules(model.value, category.value).min)
+const qtyStep = computed(() => resolveCartQtyRules(category.value).step)
+const qtyMin = computed(() => resolveCartQtyRules(category.value).min)
 const badgeText = computed(() => catalog.badgeLabel(model.value, model.value?._tipo_catalogo))
 // «Vendido em caixas de 12 un.» explica o «incrementos de 12» quando o passo é a caixa (RP-08).
 const specExtras = computed(() => [

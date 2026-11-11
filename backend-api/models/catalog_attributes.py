@@ -313,15 +313,6 @@ CATEGORY_ATTRIBUTE_SCHEMAS: Dict[str, dict] = {
 # estiver preenchido, a seguir às especificações da família. Vive em `attributes` (jsonb): não há migração.
 # `omit_if_empty`: o que não se preenche não entra no `attributes` (seis «null» em cada modelo não dizem nada).
 PRODUCT_INFO_ATTRIBUTES: Dict[str, dict] = {
-    # Passo e mínimo do pedido deste modelo (12 → 12, 24, 36…); vazio fica o da categoria. `quantity_rules` aplica-o.
-    "incremento": {
-        "type": "integer",
-        "required": False,
-        "label": "Incremento (é também a quantidade mínima)",
-        "placeholder": "vazio: o da categoria",
-        "omit_if_empty": True,
-        "storefront_hidden": True,
-    },
     "cuidados": {
         "type": "string",
         "required": False,
@@ -522,12 +513,3 @@ def validate_attributes(tipo: str, level: AttrLevel, data: dict | None) -> dict:
 
     return cleaned
 
-
-def quantity_rules(category: dict | None, model_attrs: dict | None = None) -> tuple[int, int]:
-    """(passo, mínimo) de uma linha do pedido: o `incremento` do modelo, se houver; senão o da categoria."""
-    inc = (model_attrs or {}).get("incremento")
-    if isinstance(inc, int) and inc > 0:
-        return inc, inc
-    cat = category or {}
-    step = cat.get("carrinho_step") or 6
-    return step, max(cat.get("carrinho_min") or step, step)

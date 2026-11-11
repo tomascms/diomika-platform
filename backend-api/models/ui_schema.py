@@ -90,7 +90,7 @@ FIELD_LABELS_PT = {
     "slug": "Endereço (slug)",
     "visibilidade": "Visível na loja",
     "carrinho_step": "Incremento no carrinho",
-    "carrinho_min": "Quantidade mínima no carrinho",
+    "carrinho_min": "Quantidade mínima",
     "dimensao": "Dimensão",
     "dimensoes": "Dimensões",
     "altura": "Altura",

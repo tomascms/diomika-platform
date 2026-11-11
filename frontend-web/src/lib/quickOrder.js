@@ -3,7 +3,7 @@
  * «EAN; cor; quantidade», e junta tudo ao pedido de uma vez, em vez de abrir produto a produto.
  */
 import { cartItemFor } from './cartItem.js'
-import { adjustQuantity, modelQtyRules } from './quantity.js'
+import { adjustQuantity, resolveCartQtyRules } from './quantity.js'
 
 /** Linhas que a API aceita num pedido (backend-api/core/rate_limit.py, MAX_PUBLIC_BODY_LINES). */
 export const MAX_QUOTE_LINES = 50
@@ -95,7 +95,7 @@ export function resolveQuickLine(row, found) {
         message: `${model.nome}: a cor ${row.color} não existe. As cores são ${numbers}.`,
       }
   }
-  const { step, min } = modelQtyRules(model, category)
+  const { step, min } = resolveCartQtyRules(category)
   const { value, notice } = adjustQuantity(row.quantity, min, step)
   const item = cartItemFor({ model, category, product, color, quantity: value })
   const measure = item.altura || item.dimensoes

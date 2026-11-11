@@ -14,12 +14,6 @@ export function resolveCartQtyRules(source = {}) {
   return { step, min: Math.max(min, step) }
 }
 
-/** Regras de um modelo: o `incremento` dele (passo e mínimo), se o tiver; senão as da categoria. Igual à API. */
-export function modelQtyRules(model, category = {}) {
-  const inc = Number(model?.incremento)
-  return Number.isInteger(inc) && inc > 0 ? { step: inc, min: inc } : resolveCartQtyRules(category || {})
-}
-
 /** A quantidade de uma linha cumpre as regras da sua categoria. */
 export function isValidCartQty(qty, source = {}) {
   const { step, min } = resolveCartQtyRules(source)

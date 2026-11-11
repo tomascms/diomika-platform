@@ -2,7 +2,7 @@
  * A linha do pedido para um artigo (um EAN numa cor), igual venha da ficha do produto ou do pedido rápido (RP-14).
  * Era montada à mão na ficha; duas vias para a mesma coisa é como nasceram FE-01 e FE-10.
  */
-import { modelQtyRules } from './quantity.js'
+import { resolveCartQtyRules } from './quantity.js'
 import { isSingleProductMode } from './storefrontFormat.js'
 
 /**
@@ -16,7 +16,7 @@ import { isSingleProductMode } from './storefrontFormat.js'
  */
 export function cartItemFor({ model, category, product, color, quantity, image = '' }) {
   const ctx = model._storefront
-  const rules = modelQtyRules(model, category)
+  const rules = resolveCartQtyRules(category)
   return {
     ean: product.ean,
     numero_cor: color.numero,

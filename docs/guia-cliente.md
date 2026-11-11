@@ -33,6 +33,8 @@ O catálogo organiza-se em **família de produto** (ex.: Almofadas) → **catego
 ### Criar uma categoria
 Em **Categorias → + Nova**, escolha a família e o nome. A família define os campos que os
 modelos vão ter (tipo, dimensões, composição…).
+A **Quantidade mínima** vale para todos os artigos da categoria e é também o passo do pedido
+(12 → 12, 24, 36…).
 
 ### Criar um modelo e pô-lo na loja
 1. Na categoria, **+ Adicionar** um modelo e **Guardar rascunho**. Fica oculto na loja.
@@ -43,8 +45,6 @@ modelos vão ter (tipo, dimensões, composição…).
 
 Regras:
 - O **EAN é único em todo o catálogo**: não pode repetir-se entre famílias.
-- **Incremento**: quantas unidades se encomendam de cada vez (12 → 12, 24, 36…); é também a quantidade mínima.
-  Vazio fica o da categoria.
 - No **Material de Cozinha** e no **Regional**, em **Novo registo** escolhe-se a categoria e depois a subcategoria
   (avental, luva, pega, pano de cozinha…); só então abre o formulário.
 - **Ocultar** tira o modelo da loja sem o apagar.
