@@ -16,6 +16,7 @@ TABLE_MAP, sidebar, loja e validações são gerados automaticamente a partir di
 """
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID, uuid4
 
@@ -89,6 +90,7 @@ class Categoria(BaseModel):
     )
     nome: str = Field(..., min_length=2)
     slug: str = Field(default="", json_schema_extra={"ui_readonly": True})
+    descricao: str = Field(default="", description="Descrição (aparece na página da categoria)")  # RP-08
     imagem: str = Field(..., description="URL da imagem")
     visibilidade: bool = Field(default=False)
     carrinho_step: Optional[int] = Field(default=None, description="Passo quantidade (ex: 6 ou 12). Predefinido pelo tipo.")
@@ -129,6 +131,12 @@ class ProductModelColor(BaseModel):
     visibilidade: bool = Field(default=False)
 
 
+# Colunas anuláveis de `product_models` (db/migrations/2026-10-28_modelos_fabricante.sql): quem fabrica ou importa o artigo
+# e os avisos de segurança (LEGAL-12). Um modelo que nunca as teve não as manda à base de dados (ProductModel.model_dump).
+MANUFACTURER_COLUMNS = ("fabricante_nome", "fabricante_morada", "fabricante_email", "avisos", "made_in")
+_EMAIL = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
+
+
 class ProductModel(BaseModel):
     """Modelo — tabela única product_models, para todas as categorias.
     Campos específicos da categoria (tipo, composição, dimensões, ...) em `attributes`."""
@@ -138,8 +146,54 @@ class ProductModel(BaseModel):
     nome: str = Field(..., description="Nome do Modelo")
     slug: str = Field(default="", json_schema_extra={"ui_readonly": True})
     descricao: str = Field(default="", description="Descrição")
+    fabricante_nome: Optional[str] = Field(
+        default=None,
+        json_schema_extra={"ui_label": "Fabricante ou importador: nome", "ui_placeholder": "ex: Têxteis do Ave, Lda"},
+    )
+    fabricante_morada: Optional[str] = Field(
+        default=None,
+        json_schema_extra={"ui_label": "Fabricante ou importador: morada", "ui_placeholder": "ex: Rua da Fábrica 1, 4800-001 Guimarães"},
+    )
+    fabricante_email: Optional[str] = Field(
+        default=None,
+        json_schema_extra={"ui_label": "Fabricante ou importador: email", "ui_placeholder": "ex: qualidade@fabricante.pt"},
+    )
+    avisos: Optional[str] = Field(
+        default=None,
+        json_schema_extra={
+            "ui_label": "Avisos de segurança",
+            "ui_widget": "textarea",
+            "ui_placeholder": "ex: Manter afastado de chamas. Lavar a 30 °C.",
+        },
+    )
+    made_in: Optional[str] = Field(
+        default=None,
+        json_schema_extra={"ui_label": "Made in (país de fabrico)", "ui_placeholder": "ex: Portugal", "ui_required": True},
+    )
     attributes: Dict[str, Any] = Field(default_factory=dict, json_schema_extra={"ui_hidden": True})
     visibilidade: bool = Field(default=False)
+
+    @field_validator(*MANUFACTURER_COLUMNS)
+    @classmethod
+    def clean_manufacturer_text(cls, value: Optional[str]) -> Optional[str]:
+        # Sem espaços nas pontas; «» fica «»: é o que o formulário manda ao apagar um campo, e tem de chegar à base de dados.
+        return value.strip() if isinstance(value, str) else value
+
+    @field_validator("fabricante_email")
+    @classmethod
+    def validate_manufacturer_email(cls, value: Optional[str]) -> Optional[str]:
+        if value and not _EMAIL.fullmatch(value):
+            raise ValueError("Email do fabricante ou importador inválido (ex: qualidade@fabricante.pt).")
+        return value
+
+    def model_dump(self, **kwargs):
+        """Sem as colunas do fabricante que nunca se preencheram: um modelo antigo grava-se tal como antes, mesmo que a
+        migração ainda não esteja aplicada (o PostgREST recusa colunas que não existem). Apagar um campo manda «»."""
+        data = super().model_dump(**kwargs)
+        for name in MANUFACTURER_COLUMNS:
+            if data.get(name) is None:
+                data.pop(name, None)
+        return data
 
     @model_validator(mode="after")
     def set_slug(self) -> "ProductModel":
@@ -191,6 +245,9 @@ class PedidoOrcamento(BaseModel):
     email: str = Field(..., json_schema_extra={"ui_readonly": True})
     contacto: Optional[str] = Field(None, json_schema_extra={"ui_readonly": True})
     empresa: Optional[str] = Field(None, json_schema_extra={"ui_readonly": True})
+    nif: Optional[str] = Field(None, json_schema_extra={"ui_readonly": True})
+    localidade: Optional[str] = Field(None, json_schema_extra={"ui_readonly": True})
+    tipo_cliente: Optional[str] = Field(None, json_schema_extra={"ui_readonly": True, "ui_label": "Compra como"})
     observacoes: Optional[str] = Field(None, json_schema_extra={"ui_readonly": True})
     linhas: List[Dict] = Field(default_factory=list, json_schema_extra={"ui_hidden": True})
     lida: bool = Field(default=False)

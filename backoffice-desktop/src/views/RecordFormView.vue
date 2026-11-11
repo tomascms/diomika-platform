@@ -7,7 +7,7 @@ import { useAggregatedTipos } from '@/composables/useAggregatedTipos'
 import AppIcon from '@/components/AppIcon.vue'
 import SchemaForm from '@/components/SchemaForm.vue'
 import ModelColorsPanel from '@/components/ModelColorsPanel.vue'
-import ModelVariantsPanel from '@/components/ModelVariantsPanel.vue'
+import { bundleBody } from '@/lib/bundle'
 
 const route = useRoute()
 const router = useRouter()
@@ -52,7 +52,12 @@ const isCatalogRecord = computed(() => Boolean(schema.value?.config?.ui_catalog_
 const isPublished = computed(() => formData.value.visibilidade === true)
 // Registo já na loja: «Guardar alterações» mantém-no visível; «Publicar» deixa de fazer sentido.
 const isLiveRecord = computed(() => !isNew.value && isPublished.value)
-const saveLabel = computed(() => (isLiveRecord.value ? 'Guardar alterações' : 'Guardar rascunho'))
+// Modelo novo: cria-se com os dados do modelo e pelo menos uma cor com imagem; os produtos (EAN) acrescentam-se depois.
+const isNewModel = computed(() => isNew.value && embedColors.value)
+const saveLabel = computed(() =>
+  isNewModel.value ? 'Criar modelo' : isLiveRecord.value ? 'Guardar alterações' : 'Guardar rascunho',
+)
+const canPublish = computed(() => !isLiveRecord.value && !isNewModel.value)
 const isModelForm = computed(() =>
   catalogTypes.value.some((t) => t.model_table === table.value),
 )
@@ -107,6 +112,19 @@ const aggregatedTipos = computed(() => getAggregatedTiposForCategory(selectedCat
 const showFamilyPicker = computed(
   () => isNew.value && isModelForm.value && Boolean(aggregatedTipos.value?.length),
 )
+
+// Regional: o «Tipo» (subtipo) escolhe-se antes, como a subcategoria do Material de Cozinha; o formulário só abre depois.
+const subtipoField = computed(() =>
+  isModelForm.value ? (schema.value?.fields || []).find((f) => f.name === 'subtipo' && f.widget === 'enum') || null : null,
+)
+const subtipo = computed({
+  get: () => formData.value.subtipo || '',
+  set: (v) => {
+    formData.value = { ...formData.value, subtipo: v }
+  },
+})
+const formFields = computed(() => (schema.value?.fields || []).filter((f) => f !== subtipoField.value))
+const waitingSubtipo = computed(() => Boolean(subtipoField.value) && !subtipo.value)
 
 /** Sempre editar/guardar na tabela física (nunca «modelos» / «produtos»). */
 const goToEdit = (savedId) =>
@@ -272,6 +290,10 @@ const load = async () => {
       if (hasCategoria && route.query.id_categoria) {
         formData.value.id_categoria = route.query.id_categoria
       }
+      // Regional: a subcategoria escolhida em «Novo registo» chega já escolhida.
+      if (route.query.subtipo && (schemaData.fields || []).some((f) => f.name === 'subtipo')) {
+        formData.value.subtipo = String(route.query.subtipo)
+      }
       if (formCarry) {
         formData.value = {
           ...formData.value,
@@ -326,8 +348,40 @@ const preparePayload = async (visible) => {
   return payload
 }
 
+/**
+ * Modelo, cores e produtos num só pedido atómico (API-08). Antes eram 1 + N + M pedidos e uma falha a meio deixava
+ * o catálogo a meio. `visible`: o modelo fica (ou passa a estar) na loja; a API publica então também os filhos.
+ */
+const saveWithChildren = async (visible, { requireRows }) => {
+  const model = await preparePayload(visible)
+  if (!isNew.value) model.id = recordId.value
+  const colors = await colorsPanel.value.collect({ visible, requireRows })
+  // Os produtos (EAN) não se criam no modelo: são acrescentados depois, na criação de produtos. Sem a secção, a lista fica vazia.
+  const variants = variantsPanel.value ? variantsPanel.value.collect({ visible, requireRows }) : { items: [], deleteIds: [] }
+  const result = await api.saveBundle(
+    table.value,
+    bundleBody({
+      model,
+      colors: colors.items,
+      variants: variants.items,
+      deleteColors: colors.deleteIds,
+      deleteVariants: variants.deleteIds,
+    }),
+  )
+  colorsPanel.value.commit(visible)
+  variantsPanel.value?.commit(visible)
+  return result.id
+}
+
+/** «modelos» e «produtos» são listas de várias tabelas: sem categoria escolhida não há onde gravar (dava 404). */
+const needsPhysicalTable = () => {
+  if (table.value !== 'modelos' && table.value !== 'produtos' && schema.value) return false
+  error.value = 'Escolha primeiro a categoria (e a família) do registo.'
+  return true
+}
+
 const saveDraft = async () => {
-  if (saving.value) return
+  if (saving.value || needsPhysicalTable()) return
   if (schemaFormRef.value && !schemaFormRef.value.validate()) {
     error.value = 'Preencha os campos obrigatórios.'
     return
@@ -341,38 +395,26 @@ const saveDraft = async () => {
   // Num registo já publicado, gravar mantém-no na loja (antes escondia-o, com cores e EAN).
   const keepLive = !isNew.value && isPublished.value
   try {
-    const payload = await preparePayload(keepLive)
     let savedId = recordId.value
-    if (isNew.value) {
-      const created = await api.createRecord(table.value, payload, createIdempotencyKey.value)
-      savedId = created.id
-    } else {
-      await api.updateRecord(table.value, recordId.value, payload)
-    }
-
     if (embedColors.value && colorsPanel.value) {
-      try {
-        await colorsPanel.value.save(String(savedId), { visible: keepLive })
-      } catch (e) {
-        message.value = `Rascunho guardado, mas cores: ${e.message}`
-        saving.value = false
-        if (isNew.value && savedId) await goToEdit(savedId)
-        return
-      }
-    }
-    if (embedColors.value && variantsPanel.value) {
-      try {
-        await variantsPanel.value.save(String(savedId), { visible: keepLive })
-      } catch (e) {
-        message.value = `Rascunho guardado, mas produtos: ${e.message}`
-        saving.value = false
-        if (isNew.value && savedId) await goToEdit(savedId)
-        return
+      // Modelo novo: pede sempre pelo menos uma cor (número + imagem).
+      savedId = await saveWithChildren(keepLive, { requireRows: isNewModel.value })
+    } else {
+      const payload = await preparePayload(keepLive)
+      if (isNew.value) {
+        const created = await api.createRecord(table.value, payload, createIdempotencyKey.value)
+        savedId = created.id
+      } else {
+        await api.updateRecord(table.value, recordId.value, payload)
       }
     }
 
     formData.value.visibilidade = keepLive
-    message.value = keepLive ? 'Alterações guardadas (continua visível na loja).' : 'Rascunho guardado (oculto na loja).'
+    message.value = keepLive
+      ? 'Alterações guardadas (continua visível na loja).'
+      : isNewModel.value
+        ? 'Modelo criado (oculto na loja). Acrescente os produtos (EAN) em Produtos e depois publique.'
+        : 'Rascunho guardado (oculto na loja).'
     if (isNew.value && savedId) await goToEdit(savedId)
   } catch (e) {
     error.value = e.message || 'Não foi possível guardar o rascunho.'
@@ -382,7 +424,7 @@ const saveDraft = async () => {
 }
 
 const publish = async () => {
-  if (saving.value) return
+  if (saving.value || needsPhysicalTable()) return
   if (schemaFormRef.value && !schemaFormRef.value.validate()) {
     error.value = 'Preencha os campos obrigatórios.'
     return
@@ -396,40 +438,34 @@ const publish = async () => {
   // Já publicado: fica visível durante a gravação (antes era escondido e voltava no fim).
   const wasLive = !isNew.value && isPublished.value
   try {
-    const payload = await preparePayload(wasLive)
     let savedId = recordId.value
-    if (isNew.value) {
-      const created = await api.createRecord(table.value, payload, createIdempotencyKey.value)
-      savedId = created.id
-    } else {
-      await api.updateRecord(table.value, recordId.value, payload)
-    }
-
     if (embedColors.value && colorsPanel.value) {
+      // Um só pedido: grava, publica as cores e os produtos e confirma que há imagem e EAN (a API recusa se faltar).
       try {
-        await colorsPanel.value.save(String(savedId), { visible: true, requireRows: true })
+        savedId = await saveWithChildren(true, { requireRows: true })
       } catch (e) {
-        message.value = `Dados guardados, mas cores: ${e.message}`
-        saving.value = false
-        if (isNew.value && savedId) await goToEdit(savedId)
+        // Modelo novo sem cor ou sem EAN: antes não se gravava nada e o modelo não aparecia nos produtos.
+        // Fica guardado como rascunho (oculto na loja) e o aviso diz o que falta para publicar.
+        if (!isNew.value || !e.missingRows) throw e
+        savedId = await saveWithChildren(false, { requireRows: false })
+        formData.value.visibilidade = false
+        message.value = `Guardado como rascunho (oculto na loja). Para publicar: ${e.message}`
+        if (savedId) await goToEdit(savedId)
         return
       }
-    }
-    if (embedColors.value && variantsPanel.value) {
-      try {
-        await variantsPanel.value.save(String(savedId), { visible: true, requireRows: true })
-      } catch (e) {
-        message.value = `Dados guardados, mas produtos: ${e.message}`
-        saving.value = false
-        if (isNew.value && savedId) await goToEdit(savedId)
-        return
-      }
-    }
-
-    if (isCatalogRecord.value) {
-      await api.publishRecord(table.value, savedId)
     } else {
-      await api.updateRecord(table.value, savedId, { ...payload, visibilidade: true })
+      const payload = await preparePayload(wasLive)
+      if (isNew.value) {
+        const created = await api.createRecord(table.value, payload, createIdempotencyKey.value)
+        savedId = created.id
+      } else {
+        await api.updateRecord(table.value, recordId.value, payload)
+      }
+      if (isCatalogRecord.value) {
+        await api.publishRecord(table.value, savedId)
+      } else {
+        await api.updateRecord(table.value, savedId, { ...payload, visibilidade: true })
+      }
     }
 
     formData.value.visibilidade = true
@@ -538,7 +574,7 @@ watch(() => route.fullPath, load, { immediate: true })
         {{ saving ? 'A guardar…' : saveLabel }}
       </button>
       <button
-        v-if="!loading && schema && !isLiveRecord"
+        v-if="!loading && schema && canPublish"
         class="btn btn-primary"
         type="button"
         :disabled="saving"
@@ -558,10 +594,16 @@ watch(() => route.fullPath, load, { immediate: true })
       </ul>
     </div>
 
-    <div v-if="isNew && isModelForm && !loading" class="create-flex card">
-      <p class="create-flex-hint">
-        Pode mudar a categoria (e a subcategoria) sem sair desta página — o formulário adapta-se.
-      </p>
+    <div v-if="isModelForm && !loading && (isNew || subtipoField)" class="create-flex card">
+      <label v-if="subtipoField" class="family-field">
+        <span>Subcategoria</span>
+        <select v-model="subtipo" class="input">
+          <option value="" disabled>— Escolher —</option>
+          <option v-for="opt in subtipoField.enum_options || []" :key="opt" :value="opt">
+            {{ subtipoField.enum_labels?.[opt] || opt }}
+          </option>
+        </select>
+      </label>
       <label v-if="showFamilyPicker" class="family-field">
         <span>Subcategoria</span>
         <select v-model="familyTipo" class="input">
@@ -582,11 +624,12 @@ watch(() => route.fullPath, load, { immediate: true })
       <div class="sk-line" style="width:100%" />
       <div class="sk-line" style="width:70%" />
     </div>
-    <div v-if="!loading && schema" class="form-card card">
+    <p v-if="!loading && schema && waitingSubtipo" class="muted">Escolha a subcategoria para abrir o formulário.</p>
+    <div v-if="!loading && schema && !waitingSubtipo" class="form-card card">
       <SchemaForm
         ref="schemaFormRef"
         v-model="formData"
-        :fields="schema.fields"
+        :fields="formFields"
         :relations="relations"
         :field-options="fieldOptions"
         :editing="!isNew"
@@ -600,14 +643,6 @@ watch(() => route.fullPath, load, { immediate: true })
         :colors-table="colorsTable"
         :initial-rows="bundleChildren?.colors || null"
       />
-      <ModelVariantsPanel
-        v-if="embedColors"
-        ref="variantsPanel"
-        :model-id="savedModelId"
-        :product-table="productTableForModel"
-        :initial-rows="bundleChildren?.variants || null"
-        :variant-fields="bundleChildren?.variant_fields || null"
-      />
       <div class="actions">
         <button
           class="btn"
@@ -618,7 +653,7 @@ watch(() => route.fullPath, load, { immediate: true })
         >
           {{ saving ? 'A guardar…' : saveLabel }}
         </button>
-        <button v-if="!isLiveRecord" class="btn btn-primary" type="button" :disabled="saving" @click="publish">
+        <button v-if="canPublish" class="btn btn-primary" type="button" :disabled="saving" @click="publish">
           {{ saving ? 'A publicar…' : 'Publicar na loja' }}
         </button>
         <button
@@ -757,10 +792,6 @@ watch(() => route.fullPath, load, { immediate: true })
   padding: 14px 16px;
 }
 
-.create-flex-hint {
-  font-size: 13.5px;
-  color: var(--text-secondary);
-}
 
 .family-field {
   display: grid;

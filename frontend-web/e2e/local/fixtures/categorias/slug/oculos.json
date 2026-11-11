@@ -1,0 +1,9 @@
+{
+  "id": "cc02e9a8-978d-423f-b38b-e6bc3c0f43fb",
+  "nome": "Óculos",
+  "slug": "oculos",
+  "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/categories/imagem/47a34c61285e4878aaf7cc05a77de8f4.png",
+  "tipo_catalogo": "oculo",
+  "carrinho_step": 12,
+  "carrinho_min": 12
+}

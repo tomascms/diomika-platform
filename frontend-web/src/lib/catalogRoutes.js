@@ -31,6 +31,16 @@ export function modelSlug(model) {
   return ''
 }
 
+/**
+ * A categoria mostra pelo menos um modelo? `modelos_visiveis` é o que a API conta (os modelos que a loja mostra: com EAN
+ * e com cor); com 0 a página só diria «Ainda não há modelos» (FE-05, RP-03). Sem a contagem (a API não a deu, ou a
+ * lista veio da base de dados) não se sabe, e mostra-se.
+ */
+export function hasModels(category) {
+  const count = category?.modelos_visiveis
+  return count == null || Number(count) > 0
+}
+
 /** Rota canónica da listagem de modelos numa categoria. */
 export function categoryProductsRoute(category) {
   const slug = categorySlug(category)

@@ -25,6 +25,8 @@ export default defineConfig(({ mode }) => {
       host: '127.0.0.1',
       port: 5174,
       strictPort: true,
+      // `src/lib/fibres.js` da loja (CompositionField.vue): fica fora da pasta do backoffice.
+      fs: { allow: [projectRoot] },
       proxy: {
         '/api': {
           target: useLocalApi ? 'http://127.0.0.1:8001' : cloudOrigin,

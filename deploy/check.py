@@ -39,22 +39,15 @@ def check_files() -> None:
         "README.md",
         "docs/runbook.md",
         "docs/guia-cliente.md",
-        "deploy/create_gcp_vm.py",
-        "deploy/docker-compose.free.yml",
-        "deploy/env.free.example",
         "deploy/security_gate.py",
         "deploy/verify_csp.py",
         "deploy/uptime_check.py",
         "deploy/verify_production.py",
         "deploy/smoke_test.py",
         "deploy/start_local_api.py",
-        "db/legacy/supabase_pre_deploy.sql",
         "backoffice-desktop/electron/main.cjs",
         "backoffice-desktop/electron/api-origin.cjs",
-        "db/legacy/production_setup.sql",
-        "db/migrations/2026-10-01_0001_unified_catalog_schema.sql",
-        "db/migrations/2026-10-01_0002_migrate_catalog_data.sql",
-        "db/RUNBOOK_unified_catalog_migration.md",
+        "db/migrations/2026-10-28_0000_baseline.sql",
     ]
     for rel in required:
         check(f"Ficheiro {rel}", (ROOT / rel).is_file(), "ok" if (ROOT / rel).is_file() else "em falta")
@@ -90,7 +83,7 @@ def check_env(production: bool, codebase_only: bool = False) -> None:
     )
 
     db = get_database_url()
-    sql_hint = "db/legacy/supabase_pre_deploy.sql no SQL Editor"
+    sql_hint = "db/migrations/2026-10-28_0000_baseline.sql no SQL Editor"
     check(
         "SUPABASE_DB_PASSWORD",
         bool(db),
@@ -194,7 +187,7 @@ def check_supabase() -> None:
                 check(
                     f"Tabela {table}",
                     False,
-                    "aplicar SQL: db/legacy/supabase_pre_deploy.sql",
+                    "aplicar SQL: db/migrations/2026-10-28_0000_baseline.sql",
                     critical=False,
                 )
         return
@@ -205,7 +198,7 @@ def check_supabase() -> None:
                 check(
                     f"Tabela {table}",
                     False,
-                    "aplicar SQL: db/legacy/supabase_pre_deploy.sql",
+                    "aplicar SQL: db/migrations/2026-10-28_0000_baseline.sql",
                     critical=False,
                 )
             else:

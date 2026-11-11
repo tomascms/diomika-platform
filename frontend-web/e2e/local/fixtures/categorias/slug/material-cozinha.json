@@ -1,0 +1,9 @@
+{
+  "id": "1b6f633e-3ade-4984-939f-32fecb7867af",
+  "nome": "Material de Cozinha",
+  "slug": "material-cozinha",
+  "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/categories/imagem/c3a8b7412ffc41d890d94a2241916e27.png",
+  "tipo_catalogo": "material_cozinha",
+  "carrinho_step": 12,
+  "carrinho_min": 12
+}

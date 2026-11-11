@@ -1,0 +1,61 @@
+{
+  "tipo_oculo": "sol",
+  "id": "96777c87-9623-4a70-a33a-df28c70f72dd",
+  "id_categoria": "cc02e9a8-978d-423f-b38b-e6bc3c0f43fb",
+  "tipo_catalogo": "oculo",
+  "nome": "Adulto",
+  "slug": "adulto",
+  "descricao": "",
+  "attributes": {
+    "tipo_oculo": "sol"
+  },
+  "visibilidade": true,
+  "created_at": "2026-08-28T08:54:38.18804+00:00",
+  "updated_at": "2026-10-03T16:21:05.272234+00:00",
+  "categories": {
+    "id": "cc02e9a8-978d-423f-b38b-e6bc3c0f43fb",
+    "nome": "Óculos",
+    "carrinho_step": 12,
+    "carrinho_min": 12,
+    "slug": "oculos",
+    "tipo_catalogo": "oculo"
+  },
+  "product_variants": {
+    "segmento": "homem",
+    "id": "34f411b3-f086-4229-9954-60e99c3f7fa8",
+    "ean": "5601065006010",
+    "id_modelo": "96777c87-9623-4a70-a33a-df28c70f72dd",
+    "attributes": {
+      "segmento": "homem"
+    },
+    "created_at": "2026-08-28T08:56:08.616436+00:00",
+    "updated_at": "2026-10-03T16:21:05.460077+00:00",
+    "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5601065006010.png?token=expirado",
+    "visibilidade": true,
+    "tipo_catalogo": "oculo"
+  },
+  "modelo_cores": [
+    {
+      "id_modelo": "96777c87-9623-4a70-a33a-df28c70f72dd",
+      "numero": 1,
+      "nome": "Sortido",
+      "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_oculo_cores/imagem/04038f2a1d6a47a981a13d8ef290ddf7.png",
+      "visibilidade": true
+    }
+  ],
+  "_tipo_catalogo": "oculo",
+  "_storefront": {
+    "mode": "unico",
+    "product_table": "product_variants",
+    "picker": null,
+    "specs": [],
+    "badge": {
+      "field": "tipo_oculo",
+      "labels": {
+        "sol": "Óculos de sol",
+        "leitura": "Óculos de leitura"
+      }
+    }
+  },
+  "_storefront_mode": "unico"
+}

@@ -1,0 +1,63 @@
+{
+  "composicao": {
+    "Poliéster": 100
+  },
+  "id": "ce5c8548-bf89-4dd4-b047-e8efc3fefd92",
+  "id_categoria": "1b6f633e-3ade-4984-939f-32fecb7867af",
+  "tipo_catalogo": "avental",
+  "nome": "Avental Liso",
+  "slug": "avental-liso",
+  "descricao": "Sem descrição",
+  "attributes": {
+    "composicao": {
+      "Poliéster": 100
+    }
+  },
+  "visibilidade": true,
+  "created_at": "2026-08-28T10:56:12.795578+00:00",
+  "updated_at": "2026-10-03T16:21:04.026043+00:00",
+  "categories": {
+    "id": "1b6f633e-3ade-4984-939f-32fecb7867af",
+    "nome": "Material de Cozinha",
+    "carrinho_step": 12,
+    "carrinho_min": 12,
+    "slug": "material-cozinha",
+    "tipo_catalogo": "material_cozinha"
+  },
+  "product_variants": {
+    "id": "735a4e9d-3408-4084-9def-1f00cf9e77c2",
+    "ean": "5606044500022",
+    "id_modelo": "ce5c8548-bf89-4dd4-b047-e8efc3fefd92",
+    "attributes": {},
+    "created_at": "2026-08-28T11:16:15.462325+00:00",
+    "updated_at": "2026-10-03T16:21:04.221828+00:00",
+    "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500022.png?token=expirado",
+    "visibilidade": true,
+    "tipo_catalogo": "avental"
+  },
+  "modelo_cores": [
+    {
+      "id_modelo": "ce5c8548-bf89-4dd4-b047-e8efc3fefd92",
+      "numero": 1,
+      "nome": "Sortido",
+      "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_avental_cores/imagem/2cb1ed52b5634dca88e8d9cf363d9f46.png",
+      "visibilidade": true
+    }
+  ],
+  "_tipo_catalogo": "avental",
+  "_storefront": {
+    "mode": "unico",
+    "product_table": "product_variants",
+    "picker": null,
+    "specs": [
+      {
+        "field": "composicao",
+        "label": "Composição (%) — igual para todas as cores",
+        "widget": "composition",
+        "enum_labels": {}
+      }
+    ],
+    "badge": null
+  },
+  "_storefront_mode": "unico"
+}

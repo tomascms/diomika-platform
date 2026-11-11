@@ -106,8 +106,22 @@ def fold_attributes(table: str | None, body: dict) -> dict:
     out = dict(body)
     attrs = dict(out.get("attributes") or {})
     for name in attr_names:
-        if name in out and name not in attrs:
+        if name in out:  # o valor solto é o editado: ganha ao que já estava em `attributes`
             attrs[name] = out.pop(name)
+    out["attributes"] = attrs
+    return out
+
+
+def unfold_attributes(table: str | None, record: dict | None, field_names) -> dict | None:
+    """Inverso de fold_attributes para o formulário: os atributos que são campos do formulário sobem ao nível
+    de topo (onde o backoffice os lê e edita); o resto fica em `attributes`."""
+    if not record or not isinstance(record.get("attributes"), dict):
+        return record
+    out = dict(record)
+    attrs = dict(out["attributes"])
+    for name in field_names:
+        if name in attrs and name not in out:
+            out[name] = attrs.pop(name)
     out["attributes"] = attrs
     return out
 
@@ -222,7 +236,7 @@ def list_select_query(table: str) -> str:
     `attributes` (jsonb) já vem dentro de `*`, não há mais colunas por família."""
     physical = physical_table_for(table)
     if physical == PRODUCT_VARIANTS_TABLE:
-        return f"*, {PRODUCT_MODELS_TABLE}(nome, attributes, categories(nome))"
+        return f"*, {PRODUCT_MODELS_TABLE}(nome, made_in, attributes, categories(nome))"
     if physical == PRODUCT_MODELS_TABLE:
         return "*, categories(nome)"
     if physical == PRODUCT_MODEL_COLORS_TABLE:
@@ -256,8 +270,15 @@ def admin_list_select_query(table: str, *, embed_category: bool = False) -> str:
         return ", ".join(cols)
     if physical == PRODUCT_MODEL_COLORS_TABLE:
         # !inner: ver list_select_query — a família de uma cor vem do modelo-pai.
-        return f"id, numero, nome, visibilidade, id_modelo, created_at, {PRODUCT_MODELS_TABLE}!inner(tipo_catalogo)"
-    # Tabelas não-catálogo (orçamentos, encomendas, mensagens): `nome` é o que
+        # `imagem` tem de vir: sem ela o formulário do modelo abria as cores sem foto e pedia a imagem outra vez.
+        return f"id, numero, nome, imagem, visibilidade, id_modelo, created_at, {PRODUCT_MODELS_TABLE}!inner(tipo_catalogo)"
+    if table == "pedidos_orcamento":
+        # `lida` e `status` na lista: o alternar lida/não lida e o estado precisam deles (sem `lida` o botão falhava).
+        return "id, nome, email, lida, status, vendido_em, visibilidade, created_at"
+    if table == "encomendas_internas":
+        # Sem `nome` nesta tabela (pedi-lo dava 500); o painel mostra as linhas e as observações.
+        return "id, referencia_cliente, observacoes, linhas, visibilidade, created_at"
+    # Tabelas não-catálogo (encomendas, mensagens): `nome` é o que
     # identifica a linha na lista do backoffice — sem ele mostrava o id.
     return "id, nome, visibilidade, created_at"
 

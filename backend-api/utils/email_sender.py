@@ -6,6 +6,7 @@ from email.message import EmailMessage
 from email.utils import make_msgid
 
 from core.resilience import async_retry_with_backoff, get_smtp_breaker
+from utils import gmail_api
 
 logger = logging.getLogger("diomika-api")
 
@@ -27,7 +28,8 @@ async def send_email_async(
     mail_from = os.getenv("MAIL_FROM") or mail_user
     mail_port = int(os.getenv("MAIL_PORT", "587"))
 
-    if not all([mail_server, mail_user, mail_password, mail_from]):
+    use_gmail_api = gmail_api.configured() and bool(mail_from)
+    if not use_gmail_api and not all([mail_server, mail_user, mail_password, mail_from]):
         logger.warning(
             "Email nao configurado: defina MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM"
         )
@@ -48,6 +50,9 @@ async def send_email_async(
             msg["References"] = root
         msg.set_content(body, charset="utf-8")
 
+        if use_gmail_api:
+            gmail_api.send(msg)
+            return
         with smtplib.SMTP(
             mail_server, mail_port, timeout=30, local_hostname="localhost"
         ) as server:

@@ -1,0 +1,144 @@
+{
+  "material": null,
+  "dimensoes": [
+    "150x150",
+    "150x200",
+    "150x250",
+    "150x300"
+  ],
+  "composicao": {
+    "Poliéster": 100
+  },
+  "tipo_produto": "toalha",
+  "id": "f5964764-70dc-4f7f-b574-b5a2af40c63c",
+  "id_categoria": "6496fab1-a7f0-413d-985f-64306a153ed0",
+  "tipo_catalogo": "toalha_mesa",
+  "nome": "Toalha Estampada",
+  "slug": "toalha-estampada",
+  "descricao": "Sem descrição",
+  "attributes": {
+    "material": null,
+    "dimensoes": [
+      "150x150",
+      "150x200",
+      "150x250",
+      "150x300"
+    ],
+    "composicao": {
+      "Poliéster": 100
+    },
+    "tipo_produto": "toalha"
+  },
+  "visibilidade": true,
+  "created_at": "2026-08-28T14:14:51.93188+00:00",
+  "updated_at": "2026-10-03T16:21:04.216871+00:00",
+  "categories": {
+    "id": "6496fab1-a7f0-413d-985f-64306a153ed0",
+    "nome": "Toalhas de Mesa",
+    "carrinho_step": 6,
+    "carrinho_min": 6,
+    "slug": "toalhas-mesa",
+    "tipo_catalogo": "toalha_mesa"
+  },
+  "product_variants": [
+    {
+      "dimensoes": "150x150",
+      "id": "32ee87d8-da5b-40e6-9a8e-5900ac1ba798",
+      "ean": "5606044500732",
+      "id_modelo": "f5964764-70dc-4f7f-b574-b5a2af40c63c",
+      "attributes": {
+        "dimensoes": "150x150"
+      },
+      "created_at": "2026-08-28T14:25:39.714102+00:00",
+      "updated_at": "2026-10-03T16:21:04.882963+00:00",
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500732.png?token=expirado",
+      "visibilidade": true,
+      "tipo_catalogo": "toalha_mesa"
+    },
+    {
+      "dimensoes": "150x200",
+      "id": "6a3ff2e9-9eae-40a1-af89-54688dd946a4",
+      "ean": "5606044500725",
+      "id_modelo": "f5964764-70dc-4f7f-b574-b5a2af40c63c",
+      "attributes": {
+        "dimensoes": "150x200"
+      },
+      "created_at": "2026-08-28T14:25:59.303713+00:00",
+      "updated_at": "2026-10-03T16:21:04.882963+00:00",
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500725.png?token=expirado",
+      "visibilidade": true,
+      "tipo_catalogo": "toalha_mesa"
+    },
+    {
+      "dimensoes": "150x250",
+      "id": "d59dd65b-1b94-48e1-9d7e-83d15675c8ac",
+      "ean": "5606044500749",
+      "id_modelo": "f5964764-70dc-4f7f-b574-b5a2af40c63c",
+      "attributes": {
+        "dimensoes": "150x250"
+      },
+      "created_at": "2026-08-28T14:26:17.966302+00:00",
+      "updated_at": "2026-10-03T16:21:04.882963+00:00",
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500749.png?token=expirado",
+      "visibilidade": true,
+      "tipo_catalogo": "toalha_mesa"
+    },
+    {
+      "dimensoes": "150x300",
+      "id": "9addca70-441b-41f8-9c77-42c0dd1db717",
+      "ean": "5606044500756",
+      "id_modelo": "f5964764-70dc-4f7f-b574-b5a2af40c63c",
+      "attributes": {
+        "dimensoes": "150x300"
+      },
+      "created_at": "2026-08-28T14:26:40.4532+00:00",
+      "updated_at": "2026-10-03T16:21:04.882963+00:00",
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500756.png?token=expirado",
+      "visibilidade": true,
+      "tipo_catalogo": "toalha_mesa"
+    }
+  ],
+  "modelo_cores": [
+    {
+      "id_modelo": "f5964764-70dc-4f7f-b574-b5a2af40c63c",
+      "numero": 1,
+      "nome": "Sortido",
+      "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_toalha_mesa_cores/imagem/dd86418b9e82440998ab376793b3f41d.png",
+      "visibilidade": true
+    }
+  ],
+  "_tipo_catalogo": "toalha_mesa",
+  "_storefront": {
+    "mode": "variantes",
+    "product_table": "product_variants",
+    "picker": {
+      "source": "products",
+      "field": "dimensoes",
+      "label": "Dimensão (comprimento×largura)",
+      "format": "dimensions",
+      "suffix": " cm"
+    },
+    "specs": [
+      {
+        "field": "composicao",
+        "label": "Composição (%) — igual para todas as cores",
+        "widget": "composition",
+        "enum_labels": {}
+      },
+      {
+        "field": "dimensoes",
+        "label": "Dimensões (comprimento×largura)",
+        "widget": "dimension_list",
+        "enum_labels": {}
+      }
+    ],
+    "badge": {
+      "field": "tipo_produto",
+      "labels": {
+        "toalha": "Toalha de mesa",
+        "protetor": "Protetor de mesa"
+      }
+    }
+  },
+  "_storefront_mode": "variantes"
+}

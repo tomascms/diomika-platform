@@ -3,62 +3,63 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Página não encontrada — Diomika</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      background: linear-gradient(135deg, #f0f0f0 0%, #ffffff 100%);
-      color: #333;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-    .container {
-      text-align: center;
-      max-width: 500px;
-    }
-    .code {
-      font-size: 6rem;
-      font-weight: bold;
-      color: #d97757;
-      line-height: 1;
-      margin-bottom: 10px;
-    }
-    h1 {
-      font-size: 1.5rem;
-      margin-bottom: 20px;
-      color: #333;
-    }
-    p {
-      font-size: 1rem;
-      color: #666;
-      margin-bottom: 30px;
-      line-height: 1.6;
-    }
-    a {
-      display: inline-block;
-      padding: 12px 24px;
-      background: #d97757;
-      color: white;
-      text-decoration: none;
-      border-radius: 4px;
-      font-weight: 500;
-      transition: background 0.2s;
-    }
-    a:hover {
-      background: #c46545;
-    }
-  </style>
+  <meta name="robots" content="noindex">
+  <title>Página não encontrada | Diomika</title>
+  <link rel="icon" href="/favicon.svg?v=3" type="image/svg+xml">
+  <!-- O CSS tem de ser um ficheiro: a CSP (style-src 'self') bloqueia <style> e style="" no HTML (BR-01). -->
+  <link rel="stylesheet" href="/404.css">
 </head>
 <body>
-  <div class="container">
-    <div class="code">404</div>
-    <h1>Página não encontrada</h1>
-    <p>A página que procura não existe. Verifique o URL ou regresse à página inicial.</p>
-    <a href="/">Voltar ao início</a>
-  </div>
+  <a class="skip-link" href="#main">Saltar para o conteúdo</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="logo-link" href="/" aria-label="Diomika — página inicial">
+        <img src="/brand/logo.svg" alt="Diomika" width="188" height="34">
+      </a>
+      <nav class="site-nav" aria-label="Principal">
+        <a href="/categorias">Catálogo</a>
+        <a href="/pesquisa">Pesquisar</a>
+        <a href="/sobre">Sobre nós</a>
+        <a href="/contacto">Contacto</a>
+        <a href="/carrinho">Pedido de orçamento</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="card">
+      <p class="code" aria-hidden="true">404</p>
+      <h1>Página não encontrada</h1>
+      <p class="lead">O endereço que procurou não existe ou foi movido.</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="/">Voltar ao início</a>
+        <a class="btn btn-secondary" href="/categorias">Ver o catálogo</a>
+        <a class="btn btn-secondary" href="/contacto">Contacto</a>
+        <a class="btn btn-secondary" href="https://wa.me/351935745663?text=Ol%C3%A1!%20N%C3%A3o%20consegui%20usar%20o%20site%20Diomika." target="_blank" rel="noopener noreferrer">WhatsApp</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Identificação mínima do prestador (DL 7/2004, art. 10.º): a mesma do rodapé da loja (src/App.vue). -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <address class="company-identity">
+        <p><strong>DIOMIKA INTERNACIONAL, UNIPESSOAL, LDA</strong> · <span class="nowrap">NIPC 508 651 557</span></p>
+        <p><a class="nowrap" href="tel:+351935745663">935 745 663</a> (Chamada para a rede móvel nacional) · <a href="/contacto">Contacto</a> · Rua da Quintã, n.º 89, <span class="nowrap">4805-116 Caldas das Taipas</span></p>
+      </address>
+      <ul class="footer-links">
+        <li><a href="/condicoes-de-venda">Condições de venda</a></li>
+        <li><a href="/perguntas-frequentes">Perguntas frequentes</a></li>
+        <li><a href="/privacidade">Privacidade</a></li>
+        <li><a href="/cookies">Cookies</a></li>
+        <li><a href="/termos">Informação legal</a></li>
+      </ul>
+      <div class="footer-bottom">
+        <a class="complaints-book" href="https://www.livroreclamacoes.pt" target="_blank" rel="noopener noreferrer">Livro de Reclamações Eletrónico</a>
+        <p>© DIOMIKA INTERNACIONAL, UNIPESSOAL, LDA. Todos os direitos reservados.</p>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>

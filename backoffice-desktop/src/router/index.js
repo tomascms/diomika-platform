@@ -23,6 +23,11 @@ const router = createRouter({
           component: () => import('@/views/WorkspaceRouter.vue'),
         },
         {
+          path: 'em-falta',
+          name: 'missing-content',
+          component: () => import('@/views/MissingContentView.vue'),
+        },
+        {
           path: 'workspace/:table/new',
           name: 'record-new',
           component: () => import('@/views/RecordFormView.vue'),

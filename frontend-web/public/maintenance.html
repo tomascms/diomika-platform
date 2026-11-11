@@ -5,17 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
   <title>Diomika — Manutenção</title>
+  <!--
+    Esta página vai sozinha para o artefacto de manutenção (deploy/launch_lib.py: build_maintenance_artifact), que se
+    publica sem a CSP da loja e sem os outros ficheiros do site: por isso o CSS fica aqui dentro, ao contrário de
+    404.html e status.html, que são servidos pela loja (CSP style-src 'self') e levam o CSS num ficheiro.
+  -->
   <style>
-    :root { color-scheme: dark; }
+    :root { color-scheme: light; }
     body {
-      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.5rem;
       font-family: Georgia, "Times New Roman", serif;
-      background: linear-gradient(160deg, #1a1714 0%, #2c241c 50%, #1f1b17 100%);
-      color: #f3ebe2;
+      background: #ffffff;
+      color: #1f272c;
     }
-    main { width: min(34rem, 92vw); text-align: center; padding: 2rem; }
+    main { width: min(34rem, 92vw); text-align: center; padding: 2rem 2rem 0; }
     h1 { font-size: clamp(2rem, 5vw, 2.8rem); margin: 0 0 0.75rem; letter-spacing: 0.04em; }
     p { margin: 0; opacity: 0.78; line-height: 1.5; font-family: system-ui, sans-serif; font-size: 1rem; }
+    footer { width: min(34rem, 92vw); padding: 0 2rem 2rem; text-align: center; font-family: system-ui, sans-serif; font-size: 0.85rem; line-height: 1.5; opacity: 0.7; }
+    address { font-style: normal; }
+    footer p { margin: 0.25rem 0 0; }
+    a { color: inherit; }
+    .nowrap { white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -23,5 +33,21 @@
     <h1>Diomika</h1>
     <p>Estamos a actualizar a loja. Voltamos dentro de momentos.</p>
   </main>
+  <!-- Identificação mínima do prestador (DL 7/2004, art. 10.º): a mesma do rodapé da loja (src/App.vue). -->
+  <footer>
+    <address>
+      <p><strong>DIOMIKA INTERNACIONAL, UNIPESSOAL, LDA</strong> · <span class="nowrap">NIPC 508 651 557</span></p>
+      <p><a class="nowrap" href="tel:+351935745663">935 745 663</a> (Chamada para a rede móvel nacional) · <a href="https://www.diomika.com/contacto">Contacto</a> · Rua da Quintã, n.º 89, <span class="nowrap">4805-116 Caldas das Taipas</span></p>
+    </address>
+    <p class="links">
+      <a href="https://www.diomika.com/condicoes-de-venda">Condições de venda</a> ·
+      <a href="https://www.diomika.com/perguntas-frequentes">Perguntas frequentes</a> ·
+      <a href="https://www.diomika.com/privacidade">Privacidade</a> ·
+      <a href="https://www.diomika.com/cookies">Cookies</a> ·
+      <a href="https://www.diomika.com/termos">Informação legal</a>
+    </p>
+    <p><a href="https://www.livroreclamacoes.pt" target="_blank" rel="noopener noreferrer">Livro de Reclamações Eletrónico</a></p>
+    <p>© DIOMIKA INTERNACIONAL, UNIPESSOAL, LDA. Todos os direitos reservados.</p>
+  </footer>
 </body>
 </html>

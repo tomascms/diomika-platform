@@ -1,0 +1,92 @@
+[
+  {
+    "id": "4bba6298-b2d8-4d80-9303-49118f2bb29c",
+    "nome": "Almofada",
+    "slug": "almofada",
+    "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/categories/imagem/e9d1f8c70d484f2480c3f4e55c2e9677.webp",
+    "tipo_catalogo": "almofada",
+    "carrinho_step": 12,
+    "carrinho_min": 12,
+    "modelos_visiveis": 2
+  },
+  {
+    "id": "46f8285b-f290-4ecd-a6b5-f95f4a8af37e",
+    "nome": "Assento",
+    "slug": "assento",
+    "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/categories/imagem/d410c01c3e214343bf26a5bdf4cb54f3.jpg",
+    "tipo_catalogo": "assento",
+    "carrinho_step": 12,
+    "carrinho_min": 12,
+    "modelos_visiveis": 5
+  },
+  {
+    "id": "d4037b3a-64aa-4a02-86f3-ecce8b4cc6e7",
+    "nome": "Guarda-Chuva",
+    "slug": "guarda-chuvas",
+    "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/categories/imagem/c84c6ddc2fb84121b2546686167b7594.png",
+    "tipo_catalogo": "guarda_chuva",
+    "carrinho_step": 12,
+    "carrinho_min": 12,
+    "modelos_visiveis": 0
+  },
+  {
+    "id": "1b6f633e-3ade-4984-939f-32fecb7867af",
+    "nome": "Material de Cozinha",
+    "slug": "material-cozinha",
+    "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/categories/imagem/c3a8b7412ffc41d890d94a2241916e27.png",
+    "tipo_catalogo": "material_cozinha",
+    "carrinho_step": 12,
+    "carrinho_min": 12,
+    "modelos_visiveis": 10
+  },
+  {
+    "id": "cc02e9a8-978d-423f-b38b-e6bc3c0f43fb",
+    "nome": "Óculos",
+    "slug": "oculos",
+    "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/categories/imagem/47a34c61285e4878aaf7cc05a77de8f4.png",
+    "tipo_catalogo": "oculo",
+    "carrinho_step": 12,
+    "carrinho_min": 12,
+    "modelos_visiveis": 1
+  },
+  {
+    "id": "2d71b8bc-e573-4ef2-9e57-3da83aa33084",
+    "nome": "Passadeira",
+    "slug": "passadeiras",
+    "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/categories/imagem/83d9c711df34473293ec7e6f3cdafa76.png",
+    "tipo_catalogo": "passadeira",
+    "carrinho_step": 12,
+    "carrinho_min": 12,
+    "modelos_visiveis": 0
+  },
+  {
+    "id": "1ec789a9-ef2a-4034-a154-685d491af06e",
+    "nome": "Protetor de Colchão",
+    "slug": "protetores-colchao",
+    "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/categories/imagem/90b307212e234b62b9779f9872e3e744.png",
+    "tipo_catalogo": "protetor_colchao",
+    "carrinho_step": 12,
+    "carrinho_min": 12,
+    "modelos_visiveis": 3
+  },
+  {
+    "id": "6eb42cc1-f652-4ab0-bde1-c028db32c8ef",
+    "nome": "Regional",
+    "slug": "regional",
+    "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/categories/imagem/5e204f2a46744c638557c3f7554b3819.png",
+    "tipo_catalogo": "regional",
+    "carrinho_step": 12,
+    "carrinho_min": 12,
+    "modelos_visiveis": 0
+  },
+  {
+    "id": "6496fab1-a7f0-413d-985f-64306a153ed0",
+    "nome": "Toalhas de Mesa",
+    "slug": "toalhas-mesa",
+    "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/categories/imagem/e6ed9fdeccc24593b5aea7a304f9524d.png",
+    "tipo_catalogo": "toalha_mesa",
+    "carrinho_step": 6,
+    "carrinho_min": 6,
+    "modelos_visiveis": 5
+  }
+]

@@ -1,0 +1,9 @@
+{
+  "id": "1ec789a9-ef2a-4034-a154-685d491af06e",
+  "nome": "Protetor de Colchão",
+  "slug": "protetores-colchao",
+  "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/categories/imagem/90b307212e234b62b9779f9872e3e744.png",
+  "tipo_catalogo": "protetor_colchao",
+  "carrinho_step": 12,
+  "carrinho_min": 12
+}

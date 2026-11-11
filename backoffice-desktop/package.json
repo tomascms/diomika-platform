@@ -1,6 +1,6 @@
 {
   "name": "backoffice-desktop",
-  "version": "1.3.0",
+  "version": "1.5.12",
   "private": true,
   "description": "Diomika Backoffice — app de secretária (Windows / macOS / Linux)",
   "author": "Diomika",
@@ -11,12 +11,12 @@
     "dev:ui": "cross-env NODE_OPTIONS=--use-system-ca vite",
     "dev:browser": "cross-env NODE_OPTIONS=--use-system-ca vite --open",
     "build": "vite build",
+    "test": "node --test",
     "start": "electron .",
     "dist": "npm run dist:win",
     "dist:win": "node scripts/write-gate.cjs && vite build && electron-builder --win nsis zip --x64 --publish never",
     "dist:mac": "node scripts/write-gate.cjs && vite build && electron-builder --mac dmg --universal --publish never",
     "dist:linux": "node scripts/write-gate.cjs && vite build && electron-builder --linux AppImage --x64 --publish never",
-    "dist:cliente": "node scripts/build-cliente-pack.cjs",
     "dist:dir": "node scripts/write-gate.cjs && vite build && electron-builder --dir"
   },
   "build": {
@@ -30,6 +30,7 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
+      "!electron/**/*.test.cjs",
       "package.json"
     ],
     "extraMetadata": {
@@ -89,6 +90,8 @@
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",
     "electron-updater": "^6.8.9",
+    "jszip": "^3.10.1",
+    "qrcode": "^1.5.4",
     "vue": "^3.5.32",
     "vue-router": "^5.0.4"
   },
@@ -96,7 +99,7 @@
     "@vitejs/plugin-vue": "^6.0.6",
     "concurrently": "^10.0.5",
     "cross-env": "^7.0.3",
-    "electron": "^44.5.1",
+    "electron": "^44.10.1",
     "electron-builder": "^26.15.3",
     "vite": "^8.0.8",
     "wait-on": "^9.5.1"

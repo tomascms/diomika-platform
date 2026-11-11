@@ -1,7 +1,7 @@
 {
   "name": "Diomika — Catálogo",
   "short_name": "Diomika",
-  "description": "Catálogo B2B e pedido de orçamento online",
+  "description": "Catálogo e pedido de orçamento online",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

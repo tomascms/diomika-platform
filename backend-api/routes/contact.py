@@ -4,6 +4,7 @@ import asyncio
 
 import logging
 import os
+from email.utils import parseaddr
 import re
 from uuid import UUID
 
@@ -14,6 +15,7 @@ from core.audit import audit_request
 from core.auth import require_mensagens
 from core.config import get_settings
 from core.local_only import admin_must_be_local
+from core.path_ids import UuidStr
 from core.database import get_db
 from core.text_safe import normalize_text
 from core.idempotency import (
@@ -39,11 +41,17 @@ supabase = get_db()
 class ContactRequest(BaseModel):
     nome: str = Field(..., min_length=2, max_length=120)
     email: EmailStr
-    contacto: str = Field(..., min_length=6, max_length=20)
-    assunto: str = Field(..., min_length=3, max_length=200)
+    contacto: str | None = Field(None, max_length=20)  # opcional (LEGAL-13): o email chega para responder
+    assunto: str | None = Field(None, max_length=200)  # opcional (FE-14): sem ele a mensagem fica «Sem assunto»
     mensagem: str = Field(..., min_length=10, max_length=5000)
+    origem: dict | None = None  # RP-10: de onde veio (core/origem.py limpa as chaves)
     website: str | None = None  # honeypot — deve ficar vazio
     cf_turnstile_response: str | None = None
+
+    @field_validator("email")
+    @classmethod
+    def _lower_email(cls, v: str) -> str:
+        return str(v).strip().lower()  # a BD exige minúsculas (BD-11) e o apagamento RGPD compara assim
 
     @field_validator("nome", "contacto", "assunto", "mensagem", mode="before")
     @classmethod
@@ -51,6 +59,11 @@ class ContactRequest(BaseModel):
         if isinstance(v, str):
             return normalize_text(v)
         return v
+
+    @field_validator("contacto", "assunto")
+    @classmethod
+    def _blank_is_null(cls, v: str | None) -> str | None:
+        return v or None  # «» e só espaços ficam NULL (o telefone na coluna `contacto`; o assunto vira «Sem assunto»)
 
 
 class ReplyRequest(BaseModel):
@@ -75,7 +88,6 @@ async def send_message(
 
     if not flag("CONTACT_FORM", True):
         raise HTTPException(status_code=503, detail="Formulário temporariamente indisponível.")
-    rate_limit(request, "contact_form", max_calls=5, window_seconds=60)
 
     key = (idempotency_key or "").strip()
     if get_settings().is_production and not key:
@@ -83,31 +95,35 @@ async def send_message(
     if key and len(key) > 128:
         raise HTTPException(status_code=400, detail="Idempotency-Key inválida")
 
-    if key:
-        try:
-            cached = get_cached_response(key, IDEMPOTENCY_OP)
-        except IdempotencyUnavailable:
-            raise HTTPException(status_code=503, detail="Serviço temporariamente indisponível.") from None
-        if cached:
-            return cached
-        state = begin_idempotent_request(key, IDEMPOTENCY_OP)
-        if state == "unavailable":
-            raise HTTPException(status_code=503, detail="Serviço temporariamente indisponível.")
-        if state == "cached":
-            cached = get_cached_response(key, IDEMPOTENCY_OP)
-            if cached:
-                return cached
-        if state == "in_progress":
-            raise HTTPException(status_code=409, detail="Pedido em processamento. Aguarde.")
-
+    # Honeypot e Turnstile antes de reservar a chave: quem falha e repete não apanha 409 (API-07).
     if msg.website:
-        logger.warning("Honeypot activado de %s", request.client.host if request.client else "?")
+        logger.warning("Honeypot activado de %s", get_client_ip(request))
         raise HTTPException(status_code=400, detail="Pedido inválido")
 
     try:
         await verify_turnstile_async(msg.cf_turnstile_response, get_client_ip(request))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    # Depois do Turnstile: pedidos recusados não gastam o limite do IP (SEG-01).
+    rate_limit(request, "contact_form", max_calls=5, window_seconds=60)
+
+    if key:
+        try:
+            cached = await asyncio.to_thread(get_cached_response, key, IDEMPOTENCY_OP)
+        except IdempotencyUnavailable:
+            raise HTTPException(status_code=503, detail="Serviço temporariamente indisponível.") from None
+        if cached:
+            return cached
+        state = await asyncio.to_thread(begin_idempotent_request, key, IDEMPOTENCY_OP)
+        if state == "unavailable":
+            raise HTTPException(status_code=503, detail="Serviço temporariamente indisponível.")
+        if state == "cached":
+            cached = await asyncio.to_thread(get_cached_response, key, IDEMPOTENCY_OP)
+            if cached:
+                return cached
+        if state == "in_progress":
+            raise HTTPException(status_code=409, detail="Pedido em processamento. Aguarde.")
 
     try:
         result = await run_contact_submission_saga(
@@ -116,7 +132,7 @@ async def send_message(
     except Exception as e:
         logger.error("Erro na saga de contacto: %s", e)
         if key:
-            abort_idempotent_request(key, IDEMPOTENCY_OP)
+            await asyncio.to_thread(abort_idempotent_request, key, IDEMPOTENCY_OP)
         raise HTTPException(status_code=400, detail="Não foi possível enviar a mensagem. Tente mais tarde.") from e
 
     payload = {
@@ -126,7 +142,7 @@ async def send_message(
         "message_status": result.status,
     }
     if key:
-        complete_idempotent_request(key, IDEMPOTENCY_OP, payload)
+        await asyncio.to_thread(complete_idempotent_request, key, IDEMPOTENCY_OP, payload)
     return payload
 
 
@@ -154,7 +170,7 @@ def get_messages(limit: int = 100, offset: int = 0):
     "/{message_id}",
     dependencies=[Depends(admin_must_be_local), Depends(require_mensagens)],
 )
-def get_message(message_id: str):
+def get_message(message_id: UuidStr):
     try:
         res = supabase.table("contact_messages").select("*").eq("id", message_id).single().execute()
     except Exception as e:
@@ -171,7 +187,7 @@ def get_message(message_id: str):
         .order("created_at")
         .execute()
     )
-    mail_from = (os.getenv("MAIL_FROM") or os.getenv("MAIL_USERNAME") or "").lower()
+    mail_from = parseaddr(os.getenv("MAIL_FROM") or os.getenv("MAIL_USERNAME") or "")[1].lower()
     history = []
     for row in history_res.data or []:
         sender = (row.get("sender_email") or "").lower()
@@ -179,7 +195,7 @@ def get_message(message_id: str):
             {
                 **row,
                 "body": strip_email_quotes(row.get("body") or ""),
-                "role": "vendor" if mail_from and mail_from in sender else "client",
+                "role": "vendor" if mail_from and parseaddr(sender)[1].lower() == mail_from else "client",
             }
         )
     return {"message": res.data, "history": history}
@@ -207,7 +223,7 @@ def mark_read(request: Request, message_id: UUID, lida: bool = True):
     "/responder/{message_id}",
     dependencies=[Depends(admin_must_be_local), Depends(require_mensagens)],
 )
-async def reply_to_message(request: Request, message_id: str, reply: ReplyRequest):
+async def reply_to_message(request: Request, message_id: UuidStr, reply: ReplyRequest):
     try:
         res = await asyncio.to_thread(
             lambda: supabase.table("contact_messages").select("*").eq("id", message_id).single().execute()

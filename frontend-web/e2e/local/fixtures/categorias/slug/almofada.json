@@ -1,0 +1,9 @@
+{
+  "id": "4bba6298-b2d8-4d80-9303-49118f2bb29c",
+  "nome": "Almofada",
+  "slug": "almofada",
+  "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/categories/imagem/e9d1f8c70d484f2480c3f4e55c2e9677.webp",
+  "tipo_catalogo": "almofada",
+  "carrinho_step": 12,
+  "carrinho_min": 12
+}

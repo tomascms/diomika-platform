@@ -5,7 +5,9 @@ export const storageBucket = import.meta.env.VITE_SUPABASE_STORAGE_BUCKET || 'pr
 export const supabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 export { supabaseUrl, supabaseAnonKey }
 
-const storagePrivate = /^(1|true|yes)$/i.test(String(import.meta.env.VITE_STORAGE_PRIVATE || '').trim())
+const storagePrivate = /^(1|true|yes)$/i.test(
+  String(import.meta.env.VITE_STORAGE_PRIVATE || '').trim(),
+)
 
 export function normalizeStorageUrl(url) {
   if (!url || !/^https?:\/\//i.test(url)) return url
@@ -13,7 +15,9 @@ export function normalizeStorageUrl(url) {
   let cleaned = url.replace('/object/public/public/', '/object/public/')
   // Bucket público: URLs assinadas gravadas na BD (tokens expirados) → URL pública.
   if (!storagePrivate && cleaned.includes('/storage/v1/object/sign/')) {
-    cleaned = cleaned.replace('/storage/v1/object/sign/', '/storage/v1/object/public/').split('?')[0]
+    cleaned = cleaned
+      .replace('/storage/v1/object/sign/', '/storage/v1/object/public/')
+      .split('?')[0]
   }
   const marker = '/storage/v1/object/public/'
   const idx = cleaned.indexOf(marker)

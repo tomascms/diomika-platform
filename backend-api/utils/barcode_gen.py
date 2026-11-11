@@ -1,7 +1,7 @@
 import barcode
 from barcode.writer import ImageWriter
 from io import BytesIO
-from utils.storage import upload_bytes
+from utils.storage import get_public_url, upload_bytes
 
 
 def generate_ean13(ean_code: str):
@@ -25,8 +25,11 @@ def generate_ean13(ean_code: str):
         dest_path = f"barcodes/{expected_ean}.png"
         # optimize=False: um código de barras recomprimido/redimensionado
         # como se fosse uma fotografia deixa de ser legível por um scanner.
-        public_url = upload_bytes(buffer.read(), dest_path, "image/png", optimize=False)
-        return (public_url, expected_ean)
+        upload_bytes(buffer.read(), dest_path, "image/png", optimize=False)
+        # Grava-se o URL público, que não expira. O que `upload_bytes` devolve é o URL de entrega: com o bucket
+        # privado é um URL assinado com validade, que na BD fica partido ao fim de uma hora (FE-10, SEO-07). A loja,
+        # num bucket privado, volta a assinar a partir do caminho do objecto.
+        return (get_public_url(dest_path), expected_ean)
     except barcode.errors.BarcodeError:
         return None
 

@@ -8,6 +8,12 @@ import { useWorkspace } from '@/composables/useWorkspace'
 import { useAggregatedTipos } from '@/composables/useAggregatedTipos'
 import DataList from '@/components/DataList.vue'
 import CategoryCreatePanel from '@/components/CategoryCreatePanel.vue'
+import { buildLabelLbx, labelCaption, labelFileName, modelPageUrl, SITE_HOME_URL } from '@/lib/etiquetaLbx'
+import { renderLabelBmp } from '@/lib/etiquetaImagem'
+
+import labelTemplateXml from '@/assets/etiqueta/label.xml?raw'
+import labelPropXml from '@/assets/etiqueta/prop.xml?raw'
+import labelLogoUrl from '@/assets/etiqueta/Object0.bmp?inline'
 
 const PAGE_SIZE = 40
 
@@ -117,6 +123,13 @@ const filteredRows = computed(() => {
 })
 
 const newPhysicalTipo = ref('')
+const newSubtipo = ref('')
+// Regional: a subcategoria (avental, luva, pano…) escolhe-se aqui, como a família do Material de Cozinha.
+const newSubtipoFilter = computed(() => {
+  const tipo = selectedCategory.value?.tipo_catalogo
+  const ct = catalogTypes.value.find((t) => t.tipo === tipo)
+  return (ct?.storefront_filters || []).find((f) => f.field === 'subtipo' && f.options?.length) || null
+})
 
 const mergedListParams = computed(() => {
   const params = {}
@@ -228,6 +241,42 @@ const toggleVisibility = async (row) => {
   }
 }
 
+// Etiqueta QR de um produto: QR com o link da página do modelo na loja, guardado em PDF (para as etiquetas).
+const canQr = (row) => Boolean(row?.ean) && Boolean(embeddedModel(row))
+
+// Etiqueta Brother (.lbx) do produto: logo, nome, EAN e dois QR codes (loja e produto), com o tamanho do modelo.
+const labelForRow = async (row) => {
+  const model = embeddedModel(row)
+  const productUrl = modelPageUrl({ categoryName: model?.categories?.nome, modelName: model?.nome, ean: row.ean })
+  if (!productUrl) {
+    error.value = 'Este produto não tem categoria ou modelo com nome, por isso não há link para o QR.'
+    return
+  }
+  if (!window.diomikaDesktop) {
+    error.value = 'A etiqueta só se gera na app de secretária.'
+    return
+  }
+  try {
+    const { bmp } = await renderLabelBmp({
+      logoUrl: labelLogoUrl,
+      ean: row.ean,
+      caption: labelCaption({
+        categoryName: model?.categories?.nome,
+        modelName: model.nome,
+        dimension: typeof row.attributes?.dimensoes === 'string' ? row.attributes.dimensoes : '',
+      }),
+      shopUrl: SITE_HOME_URL,
+      productUrl,
+      madeIn: model.made_in || model.attributes?.origem || '',
+    })
+    const bytes = await buildLabelLbx({ labelXml: labelTemplateXml, propXml: labelPropXml, labelBmp: bmp })
+    const res = await window.diomikaDesktop.saveLabel(labelFileName(model.nome, row.ean), bytes)
+    if (res?.saved) message.value = 'Etiqueta guardada.'
+  } catch (e) {
+    error.value = e.message || 'Não foi possível gerar a etiqueta.'
+  }
+}
+
 const deleteRow = async (row) => {
   const ptable = row._ptable || table.value
   const ok = confirm(
@@ -261,6 +310,7 @@ const startNew = async () => {
     }
     newCategoryId.value = ''
     newPhysicalTipo.value = ''
+    newSubtipo.value = ''
     showNewPicker.value = true
     return
   }
@@ -278,6 +328,10 @@ const confirmNew = () => {
     error.value = 'Escolha a família de produto.'
     return
   }
+  if (newSubtipoFilter.value && !newSubtipo.value) {
+    error.value = 'Escolha a subcategoria.'
+    return
+  }
   const physicalTable = physicalTableForCategory(newCategoryId.value, newPhysicalTipo.value || null)
   if (!physicalTable) {
     error.value = 'Categoria inválida ou tipo de catálogo em falta.'
@@ -286,7 +340,7 @@ const confirmNew = () => {
   router.push({
     name: 'record-new-physical',
     params: { table: table.value, physicalTable },
-    query: { id_categoria: newCategoryId.value },
+    query: { id_categoria: newCategoryId.value, ...(newSubtipoFilter.value ? { subtipo: newSubtipo.value } : {}) },
   })
 }
 
@@ -471,6 +525,15 @@ onActivated(() => {
           </option>
         </select>
       </template>
+      <template v-if="newSubtipoFilter">
+        <label>Subcategoria</label>
+        <select v-model="newSubtipo" class="input">
+          <option value="">— Escolher subcategoria —</option>
+          <option v-for="opt in newSubtipoFilter.options" :key="opt" :value="opt">
+            {{ newSubtipoFilter.labels?.[opt] || opt }}
+          </option>
+        </select>
+      </template>
       <div class="picker-actions">
         <button class="btn btn-ghost" @click="showNewPicker = false">Cancelar</button>
         <button class="btn btn-primary" @click="confirmNew">Continuar</button>
@@ -485,7 +548,9 @@ onActivated(() => {
       :columns="columns"
       :loading="loading"
       @open="openRow"
+      :can-qr="canQr"
       @toggle-visibility="toggleVisibility"
+      @qr="labelForRow"
       @delete="deleteRow"
     />
 

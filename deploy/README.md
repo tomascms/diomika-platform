@@ -6,14 +6,12 @@ os scripts lêem o `.env` da raiz (produção) ou pedem os valores escondidos no
 ## Publicar
 | Ficheiro | Função |
 |---|---|
-| `vm/remote_deploy.sh` | Deploy da API na VM com recuo automático para a imagem anterior (usado pelo `deploy-api.yml` e à mão) |
-| `vm_access.py` | `ssh`/`scp` para a VM por gcloud + IAP (a porta 22 não está aberta à internet) |
-| `docker-compose.free.yml` | API + Redis + Cloudflare Tunnel na VM (logs com rotação) |
-| `create_gcp_vm.py` | Cria a VM e2-micro Always Free |
-| `publish_backoffice_update.py` / `fetch_backoffice_release.py` | Feed de actualização automática do backoffice / instaladores para o cliente |
-| `set_vm_env.py` | Grava variáveis secretas no `.env` da VM pedindo-as escondidas (passagem de contas) |
+| `render_setup.py` | `env NOME`: grava segredos no Render, sem eco, e reinicia a API |
+| `gmail_autorizar.py` | Autoriza o envio de email pela Gmail API e grava `GMAIL_*` no Render |
+| `watchdog/` | Cron da Cloudflare de 10 em 10 min: mantém o Render acordado e avisa por ntfy se a API ou a loja caírem |
 
-A loja publica-se com `npm run build:prod` + `wrangler` ([runbook §1](../docs/runbook.md)).
+A API publica-se sozinha no Render a cada push na `main`. A loja publica-se pelo Actions (*Deploy loja*) a cada push em
+`frontend-web/` ([runbook §1](../docs/runbook.md)). O backoffice entrega-se com o instalador (pasta `cliente-backoffice/`, fora do git).
 
 ## Verificar (CI e pós-deploy)
 | Ficheiro | Garante |
@@ -32,12 +30,11 @@ A loja publica-se com `npm run build:prod` + `wrangler` ([runbook §1](../docs/r
 ## Operar
 | Ficheiro | Função |
 |---|---|
-| `vm/backup_db.sh` + `install_db_backups.py` | Backup diário da BD e dos utilizadores do backoffice (cron 03:30 UTC, 14 dias) |
-| `vm/restore_test.sh` | Restaura o último backup numa BD descartável e compara contagens |
+| `../.github/workflows/db-backup.yml` | Backup diário da BD (03:30 UTC, artefacto 14 dias) |
 | `backfill_thumbnails.py` | Gera miniaturas 480/960 px em falta no Storage |
 | `storage_orphans.py` | Lista/apaga imagens sem referência na BD (copia antes de apagar) |
 | `seed_catalog_demo.py` | Dados de demonstração `[TESTE]` |
-| `cloudflare/waf_rules.json` | Regras WAF e de rate limiting a recriar numa conta nova |
+| `cloudflare/waf_rules.json` | Regras WAF e de rate limiting a recriar numa conta nova |
 
 ## Desenvolvimento e carga
 | Ficheiro | Função |

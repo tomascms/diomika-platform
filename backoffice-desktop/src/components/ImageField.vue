@@ -1,10 +1,12 @@
 <script setup>
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
+import { imageWarnings } from '@/lib/image'
 const props = defineProps({ modelValue: { type: String, default: '' }, multiple: { type: Boolean, default: false }, disabled: { type: Boolean, default: false } })
 const emit = defineEmits(['update:modelValue', 'file-selected'])
 const displayPath = ref('')
 const previewUrl = ref('')
 const errorMessage = ref('')
+const sizeWarnings = ref([])
 const isUrl = (v) => /^https?:\/\//i.test(v || '')
 // Pré-visualização pela miniatura de 480 px que a API grava no upload (o original pode ter
 // centenas de KB e um modelo tem várias cores). Se faltar, cai no original.
@@ -40,6 +42,11 @@ const onPick = (e) => {
     const file = files[0]; displayPath.value = file.name; emit('update:modelValue', file.name); emit('file-selected', file)
     if (previewUrl.value?.startsWith('blob:')) URL.revokeObjectURL(previewUrl.value)
     previewUrl.value = URL.createObjectURL(file)
+    // Resolução e proporção (RP-11): só avisa, a gravação continua possível.
+    sizeWarnings.value = []
+    const probe = new Image()
+    probe.onload = () => (sizeWarnings.value = imageWarnings(probe.naturalWidth, probe.naturalHeight))
+    probe.src = previewUrl.value
   }
   e.target.value = ''
 }
@@ -54,6 +61,8 @@ onBeforeUnmount(() => {
       <label v-if="!disabled" class="btn btn-primary pick">{{ pickLabel }}<input type="file" accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif" :multiple="multiple" hidden @change="onPick" /></label>
     </div>
     <p v-if="errorMessage" class="field-error" role="alert">{{ errorMessage }}</p>
+    <p v-for="w in sizeWarnings" :key="w" class="field-warning" role="status">{{ w }}</p>
+    <p v-if="!disabled && !multiple" class="guide">Foto quadrada, 1200 px ou mais, fundo liso.</p>
     <p v-if="isSignedUrl" class="field-warning">Não grave URLs assinadas — use upload ou path do storage</p>
     <img v-if="previewUrl" :src="previewUrl" alt="" class="thumb" loading="lazy" decoding="async" @error="onPreviewError" />
   </div>
@@ -90,6 +99,12 @@ onBeforeUnmount(() => {
 
 .pick input {
   display: none;
+}
+
+.guide {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .field-error,

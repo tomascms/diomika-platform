@@ -1,0 +1,9 @@
+{
+  "id": "46f8285b-f290-4ecd-a6b5-f95f4a8af37e",
+  "nome": "Assento",
+  "slug": "assento",
+  "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/categories/imagem/d410c01c3e214343bf26a5bdf4cb54f3.jpg",
+  "tipo_catalogo": "assento",
+  "carrinho_step": 12,
+  "carrinho_min": 12
+}

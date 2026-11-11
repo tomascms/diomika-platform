@@ -1,0 +1,643 @@
+[
+  {
+    "material": null,
+    "dimensoes": [
+      "140x200",
+      "140x250",
+      "140x300",
+      "140x140"
+    ],
+    "composicao": {
+      "PVC": 100
+    },
+    "tipo_produto": "protetor",
+    "id": "3b96d128-6182-4e3e-99a5-181139a8637b",
+    "id_categoria": "6496fab1-a7f0-413d-985f-64306a153ed0",
+    "tipo_catalogo": "toalha_mesa",
+    "nome": "Protetor de Mesa",
+    "slug": "protetor-de-mesa",
+    "descricao": "Sem descrição",
+    "attributes": {
+      "material": null,
+      "dimensoes": [
+        "140x200",
+        "140x250",
+        "140x300",
+        "140x140"
+      ],
+      "composicao": {
+        "PVC": 100
+      },
+      "tipo_produto": "protetor"
+    },
+    "visibilidade": true,
+    "created_at": "2026-08-28T14:20:12.356036+00:00",
+    "updated_at": "2026-10-03T16:21:04.216871+00:00",
+    "categories": {
+      "id": "6496fab1-a7f0-413d-985f-64306a153ed0",
+      "nome": "Toalhas de Mesa",
+      "slug": "toalhas-mesa",
+      "carrinho_min": 6,
+      "carrinho_step": 6,
+      "tipo_catalogo": "toalha_mesa"
+    },
+    "product_variants": [
+      {
+        "dimensoes": "140x140",
+        "id": "81c691da-b5fb-4a7b-83cf-668160f57e19",
+        "ean": "5606044501371",
+        "attributes": {
+          "dimensoes": "140x140"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044501371.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "140x200",
+        "id": "5aa34e2a-028f-4fee-8896-bfd7171775bd",
+        "ean": "5606044051388",
+        "attributes": {
+          "dimensoes": "140x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044051388.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "140x250",
+        "id": "b2916584-39b5-49db-9828-990837d4f01a",
+        "ean": "5602067026921",
+        "attributes": {
+          "dimensoes": "140x250"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5602067026921.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "140x300",
+        "id": "25b72931-4c64-41ed-a928-bf2a0c41dbeb",
+        "ean": "5602067026938",
+        "attributes": {
+          "dimensoes": "140x300"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5602067026938.png?token=expirado",
+        "visibilidade": true
+      }
+    ],
+    "modelo_cores": [
+      {
+        "id_modelo": "3b96d128-6182-4e3e-99a5-181139a8637b",
+        "numero": 1,
+        "nome": "Sortido",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_toalha_mesa_cores/imagem/b6f4fb8d131f428f93143961d0563e63.png",
+        "visibilidade": true
+      }
+    ],
+    "_tipo_catalogo": "toalha_mesa",
+    "_storefront": {
+      "mode": "variantes",
+      "product_table": "product_variants",
+      "picker": {
+        "source": "products",
+        "field": "dimensoes",
+        "label": "Dimensão (comprimento×largura)",
+        "format": "dimensions",
+        "suffix": " cm"
+      },
+      "specs": [
+        {
+          "field": "composicao",
+          "label": "Composição (%) — igual para todas as cores",
+          "widget": "composition",
+          "enum_labels": {}
+        },
+        {
+          "field": "dimensoes",
+          "label": "Dimensões (comprimento×largura)",
+          "widget": "dimension_list",
+          "enum_labels": {}
+        }
+      ],
+      "badge": {
+        "field": "tipo_produto",
+        "labels": {
+          "toalha": "Toalha de mesa",
+          "protetor": "Protetor de mesa"
+        }
+      }
+    },
+    "_storefront_mode": "variantes"
+  },
+  {
+    "material": null,
+    "dimensoes": [
+      "160x160",
+      "160x200",
+      "160x250",
+      "160x300"
+    ],
+    "composicao": {
+      "Poliéster": 100
+    },
+    "tipo_produto": "toalha",
+    "id": "5988ed69-c72b-417e-9227-43a01abe63ba",
+    "id_categoria": "6496fab1-a7f0-413d-985f-64306a153ed0",
+    "tipo_catalogo": "toalha_mesa",
+    "nome": "Toalha Anti-Mancha",
+    "slug": "toalha-anti-mancha",
+    "descricao": "Sem descrição",
+    "attributes": {
+      "material": null,
+      "dimensoes": [
+        "160x160",
+        "160x200",
+        "160x250",
+        "160x300"
+      ],
+      "composicao": {
+        "Poliéster": 100
+      },
+      "tipo_produto": "toalha"
+    },
+    "visibilidade": true,
+    "created_at": "2026-08-28T14:08:26.180653+00:00",
+    "updated_at": "2026-10-03T16:21:04.216871+00:00",
+    "categories": {
+      "id": "6496fab1-a7f0-413d-985f-64306a153ed0",
+      "nome": "Toalhas de Mesa",
+      "slug": "toalhas-mesa",
+      "carrinho_min": 6,
+      "carrinho_step": 6,
+      "tipo_catalogo": "toalha_mesa"
+    },
+    "product_variants": [
+      {
+        "dimensoes": "160x160",
+        "id": "fdbba13d-83ce-4875-bc65-0f2c23fd7383",
+        "ean": "5606044500893",
+        "attributes": {
+          "dimensoes": "160x160"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500893.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "160x200",
+        "id": "d5df0826-d123-4698-b5ad-7dd274be68cb",
+        "ean": "5606044500886",
+        "attributes": {
+          "dimensoes": "160x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500886.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "160x250",
+        "id": "508e4f3b-dd87-4cb9-9f4c-4ebf865be177",
+        "ean": "5606044500879",
+        "attributes": {
+          "dimensoes": "160x250"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500879.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "160x300",
+        "id": "d842c248-bd71-4c45-9f59-1813b47530d0",
+        "ean": "5606044500862",
+        "attributes": {
+          "dimensoes": "160x300"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500862.png?token=expirado",
+        "visibilidade": true
+      }
+    ],
+    "modelo_cores": [
+      {
+        "id_modelo": "5988ed69-c72b-417e-9227-43a01abe63ba",
+        "numero": 1,
+        "nome": "Sortido",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_toalha_mesa_cores/imagem/f57130828e934f0b8c40424f689dd1f0.png",
+        "visibilidade": true
+      }
+    ],
+    "_tipo_catalogo": "toalha_mesa",
+    "_storefront": {
+      "mode": "variantes",
+      "product_table": "product_variants",
+      "picker": {
+        "source": "products",
+        "field": "dimensoes",
+        "label": "Dimensão (comprimento×largura)",
+        "format": "dimensions",
+        "suffix": " cm"
+      },
+      "specs": [
+        {
+          "field": "composicao",
+          "label": "Composição (%) — igual para todas as cores",
+          "widget": "composition",
+          "enum_labels": {}
+        },
+        {
+          "field": "dimensoes",
+          "label": "Dimensões (comprimento×largura)",
+          "widget": "dimension_list",
+          "enum_labels": {}
+        }
+      ],
+      "badge": {
+        "field": "tipo_produto",
+        "labels": {
+          "toalha": "Toalha de mesa",
+          "protetor": "Protetor de mesa"
+        }
+      }
+    },
+    "_storefront_mode": "variantes"
+  },
+  {
+    "material": null,
+    "dimensoes": [
+      "150x150",
+      "150x200",
+      "150x250",
+      "150x300"
+    ],
+    "composicao": {
+      "Poliéster": 100
+    },
+    "tipo_produto": "toalha",
+    "id": "f5964764-70dc-4f7f-b574-b5a2af40c63c",
+    "id_categoria": "6496fab1-a7f0-413d-985f-64306a153ed0",
+    "tipo_catalogo": "toalha_mesa",
+    "nome": "Toalha Estampada",
+    "slug": "toalha-estampada",
+    "descricao": "Sem descrição",
+    "attributes": {
+      "material": null,
+      "dimensoes": [
+        "150x150",
+        "150x200",
+        "150x250",
+        "150x300"
+      ],
+      "composicao": {
+        "Poliéster": 100
+      },
+      "tipo_produto": "toalha"
+    },
+    "visibilidade": true,
+    "created_at": "2026-08-28T14:14:51.93188+00:00",
+    "updated_at": "2026-10-03T16:21:04.216871+00:00",
+    "categories": {
+      "id": "6496fab1-a7f0-413d-985f-64306a153ed0",
+      "nome": "Toalhas de Mesa",
+      "slug": "toalhas-mesa",
+      "carrinho_min": 6,
+      "carrinho_step": 6,
+      "tipo_catalogo": "toalha_mesa"
+    },
+    "product_variants": [
+      {
+        "dimensoes": "150x150",
+        "id": "32ee87d8-da5b-40e6-9a8e-5900ac1ba798",
+        "ean": "5606044500732",
+        "attributes": {
+          "dimensoes": "150x150"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500732.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "150x200",
+        "id": "6a3ff2e9-9eae-40a1-af89-54688dd946a4",
+        "ean": "5606044500725",
+        "attributes": {
+          "dimensoes": "150x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500725.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "150x250",
+        "id": "d59dd65b-1b94-48e1-9d7e-83d15675c8ac",
+        "ean": "5606044500749",
+        "attributes": {
+          "dimensoes": "150x250"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500749.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "150x300",
+        "id": "9addca70-441b-41f8-9c77-42c0dd1db717",
+        "ean": "5606044500756",
+        "attributes": {
+          "dimensoes": "150x300"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500756.png?token=expirado",
+        "visibilidade": true
+      }
+    ],
+    "modelo_cores": [
+      {
+        "id_modelo": "f5964764-70dc-4f7f-b574-b5a2af40c63c",
+        "numero": 1,
+        "nome": "Sortido",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_toalha_mesa_cores/imagem/dd86418b9e82440998ab376793b3f41d.png",
+        "visibilidade": true
+      }
+    ],
+    "_tipo_catalogo": "toalha_mesa",
+    "_storefront": {
+      "mode": "variantes",
+      "product_table": "product_variants",
+      "picker": {
+        "source": "products",
+        "field": "dimensoes",
+        "label": "Dimensão (comprimento×largura)",
+        "format": "dimensions",
+        "suffix": " cm"
+      },
+      "specs": [
+        {
+          "field": "composicao",
+          "label": "Composição (%) — igual para todas as cores",
+          "widget": "composition",
+          "enum_labels": {}
+        },
+        {
+          "field": "dimensoes",
+          "label": "Dimensões (comprimento×largura)",
+          "widget": "dimension_list",
+          "enum_labels": {}
+        }
+      ],
+      "badge": {
+        "field": "tipo_produto",
+        "labels": {
+          "toalha": "Toalha de mesa",
+          "protetor": "Protetor de mesa"
+        }
+      }
+    },
+    "_storefront_mode": "variantes"
+  },
+  {
+    "material": null,
+    "dimensoes": [
+      "150x150",
+      "150x200",
+      "150x250",
+      "150x300"
+    ],
+    "composicao": {
+      "Poliéster": 100
+    },
+    "tipo_produto": "toalha",
+    "id": "55ad150b-1214-4df9-9c18-01486ee98ae4",
+    "id_categoria": "6496fab1-a7f0-413d-985f-64306a153ed0",
+    "tipo_catalogo": "toalha_mesa",
+    "nome": "Toalha Natal",
+    "slug": "toalha-natal",
+    "descricao": "Sem descrição",
+    "attributes": {
+      "material": null,
+      "dimensoes": [
+        "150x150",
+        "150x200",
+        "150x250",
+        "150x300"
+      ],
+      "composicao": {
+        "Poliéster": 100
+      },
+      "tipo_produto": "toalha"
+    },
+    "visibilidade": true,
+    "created_at": "2026-08-28T14:04:26.887925+00:00",
+    "updated_at": "2026-10-03T16:21:04.216871+00:00",
+    "categories": {
+      "id": "6496fab1-a7f0-413d-985f-64306a153ed0",
+      "nome": "Toalhas de Mesa",
+      "slug": "toalhas-mesa",
+      "carrinho_min": 6,
+      "carrinho_step": 6,
+      "tipo_catalogo": "toalha_mesa"
+    },
+    "product_variants": [
+      {
+        "dimensoes": "150x150",
+        "id": "226912f4-2a77-473e-8a93-eaf35b866878",
+        "ean": "5606044500824",
+        "attributes": {
+          "dimensoes": "150x150"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500824.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "150x200",
+        "id": "4308071b-8708-4167-9b84-52523f1cd6d1",
+        "ean": "5606044500831",
+        "attributes": {
+          "dimensoes": "150x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500831.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "150x250",
+        "id": "40256b84-72a6-42ba-b86a-2786d4124c93",
+        "ean": "5606044500848",
+        "attributes": {
+          "dimensoes": "150x250"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500848.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "150x300",
+        "id": "6c634033-bf50-4453-b0a9-76d8ff3b22e3",
+        "ean": "5606044500855",
+        "attributes": {
+          "dimensoes": "150x300"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500855.png?token=expirado",
+        "visibilidade": true
+      }
+    ],
+    "modelo_cores": [
+      {
+        "id_modelo": "55ad150b-1214-4df9-9c18-01486ee98ae4",
+        "numero": 1,
+        "nome": "Sortido",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_toalha_mesa_cores/imagem/c31063d9f681484a851da6f5344ca367.png",
+        "visibilidade": true
+      }
+    ],
+    "_tipo_catalogo": "toalha_mesa",
+    "_storefront": {
+      "mode": "variantes",
+      "product_table": "product_variants",
+      "picker": {
+        "source": "products",
+        "field": "dimensoes",
+        "label": "Dimensão (comprimento×largura)",
+        "format": "dimensions",
+        "suffix": " cm"
+      },
+      "specs": [
+        {
+          "field": "composicao",
+          "label": "Composição (%) — igual para todas as cores",
+          "widget": "composition",
+          "enum_labels": {}
+        },
+        {
+          "field": "dimensoes",
+          "label": "Dimensões (comprimento×largura)",
+          "widget": "dimension_list",
+          "enum_labels": {}
+        }
+      ],
+      "badge": {
+        "field": "tipo_produto",
+        "labels": {
+          "toalha": "Toalha de mesa",
+          "protetor": "Protetor de mesa"
+        }
+      }
+    },
+    "_storefront_mode": "variantes"
+  },
+  {
+    "material": null,
+    "dimensoes": [
+      "140x140",
+      "140x200",
+      "140x250",
+      "140x300"
+    ],
+    "composicao": {
+      "PVC": 100
+    },
+    "tipo_produto": "toalha",
+    "id": "e1cee5d8-5736-4915-96fb-866d79f28d67",
+    "id_categoria": "6496fab1-a7f0-413d-985f-64306a153ed0",
+    "tipo_catalogo": "toalha_mesa",
+    "nome": "Toalha PVC",
+    "slug": "toalha-pvc",
+    "descricao": "Sem descrição",
+    "attributes": {
+      "material": null,
+      "dimensoes": [
+        "140x140",
+        "140x200",
+        "140x250",
+        "140x300"
+      ],
+      "composicao": {
+        "PVC": 100
+      },
+      "tipo_produto": "toalha"
+    },
+    "visibilidade": true,
+    "created_at": "2026-08-28T13:59:11.799058+00:00",
+    "updated_at": "2026-10-03T16:21:04.216871+00:00",
+    "categories": {
+      "id": "6496fab1-a7f0-413d-985f-64306a153ed0",
+      "nome": "Toalhas de Mesa",
+      "slug": "toalhas-mesa",
+      "carrinho_min": 6,
+      "carrinho_step": 6,
+      "tipo_catalogo": "toalha_mesa"
+    },
+    "product_variants": [
+      {
+        "dimensoes": "140x140",
+        "id": "e239db4a-3df4-4450-8cc9-642fe780d3f9",
+        "ean": "5606044500664",
+        "attributes": {
+          "dimensoes": "140x140"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500664.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "140x200",
+        "id": "541b954f-fda8-4c51-8826-2b73e4804729",
+        "ean": "5606044500671",
+        "attributes": {
+          "dimensoes": "140x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500671.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "140x250",
+        "id": "efd30f75-1083-4f36-a986-1fe28935d051",
+        "ean": "5606044500688",
+        "attributes": {
+          "dimensoes": "140x250"
+        },
+        "barcode_url": null,
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "140x300",
+        "id": "74d469f7-c432-4755-aeab-7e30b1ccb043",
+        "ean": "5606044500695",
+        "attributes": {
+          "dimensoes": "140x300"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500695.png?token=expirado",
+        "visibilidade": true
+      }
+    ],
+    "modelo_cores": [
+      {
+        "id_modelo": "e1cee5d8-5736-4915-96fb-866d79f28d67",
+        "numero": 1,
+        "nome": "Sortido",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_toalha_mesa_cores/imagem/2b6ea6bd62254fd296fd1743be5a9838.png",
+        "visibilidade": true
+      }
+    ],
+    "_tipo_catalogo": "toalha_mesa",
+    "_storefront": {
+      "mode": "variantes",
+      "product_table": "product_variants",
+      "picker": {
+        "source": "products",
+        "field": "dimensoes",
+        "label": "Dimensão (comprimento×largura)",
+        "format": "dimensions",
+        "suffix": " cm"
+      },
+      "specs": [
+        {
+          "field": "composicao",
+          "label": "Composição (%) — igual para todas as cores",
+          "widget": "composition",
+          "enum_labels": {}
+        },
+        {
+          "field": "dimensoes",
+          "label": "Dimensões (comprimento×largura)",
+          "widget": "dimension_list",
+          "enum_labels": {}
+        }
+      ],
+      "badge": {
+        "field": "tipo_produto",
+        "labels": {
+          "toalha": "Toalha de mesa",
+          "protetor": "Protetor de mesa"
+        }
+      }
+    },
+    "_storefront_mode": "variantes",
+    "_has_more": false
+  }
+]

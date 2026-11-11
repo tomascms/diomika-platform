@@ -15,7 +15,7 @@ def _settings():
 
 def _fake_post(valid_secret):
     def post(url, data, **kw):
-        return SimpleNamespace(json=lambda: {"success": data["secret"] == valid_secret})
+        return SimpleNamespace(json=lambda: {"success": data["secret"] == valid_secret, "hostname": "www.diomika.com"})
     return post
 
 

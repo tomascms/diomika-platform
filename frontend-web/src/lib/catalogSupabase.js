@@ -1,5 +1,6 @@
 import { ensureSupabase, supabaseConfigured } from '@/lib/supabase'
 import { PHYSICAL_CATALOG_TABLES, getCatalogMeta, getTipoConfig } from '@/lib/catalogMeta'
+import { slugifyName } from '@/lib/catalogRoutes'
 
 // Esquema unificado: 3 tabelas físicas partilhadas por todas as categorias,
 // discriminadas por `tipo_catalogo`. Isto é o caminho de reserva usado só
@@ -39,13 +40,19 @@ function visibleProducts(rows) {
 function normalizeStringList(value) {
   if (value == null) return []
   if (Array.isArray(value)) {
-    return [...value].map((v) => String(v).trim()).filter(Boolean).sort()
+    return [...value]
+      .map((v) => String(v).trim())
+      .filter(Boolean)
+      .sort()
   }
   if (typeof value === 'string') {
     try {
       const parsed = JSON.parse(value)
       if (Array.isArray(parsed)) {
-        return parsed.map((v) => String(v).trim()).filter(Boolean).sort()
+        return parsed
+          .map((v) => String(v).trim())
+          .filter(Boolean)
+          .sort()
       }
     } catch {
       /* continua */
@@ -139,7 +146,9 @@ function finalizeModelRow(row, cfg) {
   } else {
     if (!products.length) return null
     products.sort((a, b) =>
-      String(a.dimensoes || a.segmento || '').localeCompare(String(b.dimensoes || b.segmento || '')),
+      String(a.dimensoes || a.segmento || '').localeCompare(
+        String(b.dimensoes || b.segmento || ''),
+      ),
     )
     row[pt] = products
   }
@@ -169,9 +178,7 @@ function matchesProductFilters(row, productFilters) {
   if (!entries.length) return true
   const raw = row?.[VARIANTS_TABLE]
   const products = Array.isArray(raw) ? raw : raw ? [raw] : []
-  return products.some((p) =>
-    entries.every(([field, value]) => String(p?.[field] ?? '') === value),
-  )
+  return products.some((p) => entries.every(([field, value]) => String(p?.[field] ?? '') === value))
 }
 
 export { getCatalogMeta } from '@/lib/catalogMeta'
@@ -252,7 +259,11 @@ async function requirePublicCategory(categoryId) {
   return isVisible(data)
 }
 
-export async function catalogueModelsForTipo(tipo, categoryId, { filters = {}, filterField = null, filterValue = null } = {}) {
+export async function catalogueModelsForTipo(
+  tipo,
+  categoryId,
+  { filters = {}, filterField = null, filterValue = null } = {},
+) {
   const supabase = await db()
 
   const cfg = getTipoConfig(tipo)
@@ -373,22 +384,29 @@ export async function modelDetailForSlugs(categorySlug, modelSlug, tipo = null) 
 
 async function _lookupModelInTable(tipo, categoryId, modKey) {
   const supabase = await db()
-  const isUuidKey = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(modKey)
+  const isUuidKey =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(modKey)
   const baseSelect = `*, categories(${CATEGORY_EMBED},visibilidade), ${VARIANTS_TABLE}(*)`
   const baseFilters = (q) =>
     q.eq('id_categoria', categoryId).eq('tipo_catalogo', tipo).eq('visibilidade', true)
 
   if (isUuidKey) {
-    const { data, error } = await baseFilters(supabase.from(MODELS_TABLE).select(baseSelect)).eq('id', modKey).maybeSingle()
+    const { data, error } = await baseFilters(supabase.from(MODELS_TABLE).select(baseSelect))
+      .eq('id', modKey)
+      .maybeSingle()
     if (error) throw new Error(error.message)
     return data
   }
 
+  // O URL da loja vem do nome (slugifyName), que pode não ser o slug gravado: procura pelos dois.
   const { data: rows, error } = await baseFilters(supabase.from(MODELS_TABLE).select(baseSelect))
-    .or(`slug.eq.${modKey},nome.ilike.${modKey}`)
-    .limit(1)
   if (error) throw new Error(error.message)
-  return rows?.[0] || null
+  const key = modKey.toLowerCase()
+  return (
+    (rows || []).find((r) => r.slug === modKey) ||
+    (rows || []).find((r) => slugifyName(r.nome) === key) ||
+    null
+  )
 }
 
 async function finalizeModelDetailRow(data, cfg) {

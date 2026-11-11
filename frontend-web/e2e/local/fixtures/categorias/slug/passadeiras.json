@@ -1,0 +1,9 @@
+{
+  "id": "2d71b8bc-e573-4ef2-9e57-3da83aa33084",
+  "nome": "Passadeira",
+  "slug": "passadeiras",
+  "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/categories/imagem/83d9c711df34473293ec7e6f3cdafa76.png",
+  "tipo_catalogo": "passadeira",
+  "carrinho_step": 12,
+  "carrinho_min": 12
+}

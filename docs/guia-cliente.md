@@ -1,20 +1,29 @@
 # Guia do backoffice Diomika
 
 O backoffice é a aplicação onde gere o catálogo da loja, os orçamentos, as encomendas e as
-mensagens de contacto. Funciona em Windows, Mac e Linux e liga-se sozinho a `api.diomika.com`.
+mensagens de contacto. Funciona em Windows e Mac e liga-se sozinho a `api.diomika.com`.
 
 ## Instalar e entrar
 
 1. Instale com o ficheiro que recebeu (`Diomika-Backoffice-<versão>-setup.exe` no Windows,
-   `.dmg` no Mac, `.AppImage` no Linux). Se o Windows avisar «Editor desconhecido», escolha
+   `.dmg` no Mac). Se o Windows avisar «Editor desconhecido», escolha
    **Mais informações → Executar mesmo assim** (a aplicação não tem certificado pago).
-2. Entre com o seu utilizador e palavra-passe. Se a verificação em dois passos estiver activa,
-   leia o código QR com uma app de autenticação (Google Authenticator, Microsoft Authenticator)
-   e escreva o código de 6 dígitos.
-3. Depois de 5 tentativas falhadas a conta fica bloqueada 15 minutos.
+2. Abra a aplicação: entra sozinha, sem utilizador nem palavra-passe. Não dê o instalador a ninguém:
+   quem o tiver entra no backoffice.
 
-**Actualizações:** no Windows e no Linux a aplicação actualiza-se sozinha ao fechar. No Mac
-aparece um aviso com a ligação para descarregar a versão nova.
+**No Mac, só na primeira vez** (a aplicação não tem a assinatura paga da Apple):
+
+1. Abra o `.dmg` e arraste **Diomika Backoffice** para a pasta **Aplicações**.
+2. Abra a aplicação. O Mac diz que não a pode verificar: carregue em **OK** (ou **Concluído**).
+3. Abra **Definições do Sistema → Privacidade e Segurança**, desça até ao fim e carregue em
+   **Abrir mesmo assim**. Confirme com a palavra-passe do Mac.
+4. Se o antivírus bloquear o ficheiro, autorize «Diomika Backoffice» no antivírus.
+
+A partir daí abre normalmente.
+
+**Actualizações:** a aplicação não se actualiza sozinha. As mudanças no servidor (dados, regras, orçamentos) chegam sem fazer nada, mas quando os
+ecrãs da aplicação mudam a Diomika envia um instalador novo. Instale-o por cima
+do anterior; os dados não se perdem, estão no servidor.
 
 ## Catálogo
 
@@ -34,6 +43,10 @@ modelos vão ter (tipo, dimensões, composição…).
 
 Regras:
 - O **EAN é único em todo o catálogo**: não pode repetir-se entre famílias.
+- **Incremento**: quantas unidades se encomendam de cada vez (12 → 12, 24, 36…); é também a quantidade mínima.
+  Vazio fica o da categoria.
+- No **Material de Cozinha** e no **Regional**, em **Novo registo** escolhe-se a categoria e depois a subcategoria
+  (avental, luva, pega, pano de cozinha…); só então abre o formulário.
 - **Ocultar** tira o modelo da loja sem o apagar.
 - A loja mostra as alterações em segundos (a cache é renovada a cada gravação).
 
@@ -43,7 +56,29 @@ uma pré-visualização e só grava depois de confirmar.
 
 ## Orçamentos do site
 Os pedidos feitos na loja aparecem em **Orçamentos do site**. Abra um para ver as linhas e
-descarregar o PDF. Mude o estado à medida que avança com o cliente.
+descarregar o PDF. As linhas mostram o nome do modelo, a medida e a cor, e o pedido mostra por onde o
+comprador entrou no site.
+
+Em **Ciclo do pedido** mude o **estado** à medida que avança com o cliente: Nova → Em análise → Proposta enviada
+→ Ganho (vendido) / Perdido / Arquivado. Pode registar o **valor da proposta** e uma **nota interna** (o cliente
+não a vê). Ao marcar **Ganho** fica guardada a data da venda, e esse pedido nunca é apagado pela retenção dos
+24 meses; os pedidos sem venda são apagados passado esse prazo.
+
+**Responder por email** abre o seu programa de email com um de dois textos já escritos: **Proposta a particular**
+(leva a informação que a lei exige antes de o particular aceitar e pede que responda «Aceito» por escrito) e
+**Confirmação de encomenda** (a enviar no prazo de 5 dias depois de aceite). Preencha o que está entre
+[parênteses] e anexe o PDF. Envie sempre as condições gerais de venda com a proposta. Uma venda a particular só
+fica fechada com o «Aceito» escrito; por telefone não basta.
+
+Cada pedido tem um número («Pedido n.º …»): é o que o comprador vê no ecrã de confirmação e pode indicar
+no WhatsApp ou ao telefone. Se o comprador os indicou, o pedido mostra também a empresa, o NIF, a localidade
+e se compra como empresa ou como particular; a um particular aplicam-se os direitos de consumidor (parte B2C
+das condições gerais de venda).
+
+## Conteúdo em falta
+No menu, **Conteúdo em falta** lista os modelos com algo por preencher (descrição, composição, EAN, fotografia
+real, mais do que a cor «Sortido»), com uma ligação para cada um. Ao escolher uma fotografia, a aplicação avisa
+se tem menos de 1200 px de lado ou se não é quase quadrada (a loja mostra-a num quadrado).
 
 ## Encomendas
 Em **Encomendas → Nova encomenda interna** cria uma encomenda escolhendo modelo, medida/altura,

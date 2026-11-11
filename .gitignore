@@ -1,4 +1,4 @@
-# Secrets — nunca versionar .env (fica só na VM / PC local)
+# Secrets — nunca versionar .env (fica só no PC local e no Render)
 .env
 .env.local
 .env.*.local
@@ -99,5 +99,7 @@ monitor-hub/ui/_preview-snapshot.json
 monitor-hub/ui/preview.html
 .local-previews/
 deploy/_*.sql
-deploy/generated_*.sql.coverage
+deploy/generated_*.sql
+.coverage
+htmlcov/
 .claude/

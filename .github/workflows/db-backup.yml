@@ -1,0 +1,35 @@
+name: Backup da base de dados
+
+# Backup diário da base de dados do Supabase (substitui o cron da VM, que deixou de existir com o Render).
+# pg_dump em formato custom, verificado com pg_restore --list, guardado como artefacto durante 14 dias.
+# Repositório privado sem método de pagamento: os minutos grátis acabam, nunca cobram.
+# Secret: DB_BACKUP_URL (postgresql://postgres.<ref>:<senha>@aws-0-eu-west-1.pooler.supabase.com:5432/postgres).
+# Restaurar: pg_restore --clean --if-exists -d "<url>" ficheiro.dump
+
+on:
+  schedule:
+    - cron: "30 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: pg_dump
+        env:
+          DB_BACKUP_URL: ${{ secrets.DB_BACKUP_URL }}
+        run: |
+          set -euo pipefail
+          f="diomika-$(date -u +%F).dump"
+          docker run --rm -e URL="$DB_BACKUP_URL" -v "$PWD:/out" postgres:17-alpine \
+            sh -c 'pg_dump -Fc --no-owner -d "$URL" -f /out/'"$f"' && pg_restore --list /out/'"$f"' >/dev/null'
+          echo "FILE=$f" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.FILE }}
+          path: ${{ env.FILE }}
+          retention-days: 14

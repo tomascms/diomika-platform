@@ -3,9 +3,16 @@ import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { apiPost } from '@/lib/api'
 import { captureEvent } from '@/lib/posthog'
+import { readOrigem } from '@/lib/origem'
+import { readConsent } from '@/lib/consent'
+import { useInlineValidation } from '@/composables/useInlineValidation'
 import { useTurnstile } from '@/composables/useTurnstile'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
 import { COMPANY, whatsappUrl } from '@/lib/constants'
+import { minLengthError, nameError } from '@/lib/formRules'
+import { formKey } from '@/lib/idempotency'
+import CallButton from '@/components/CallButton.vue'
+import ContactAlternatives from '@/components/ContactAlternatives.vue'
 
 const turnstile = useTurnstile()
 const {
@@ -26,33 +33,24 @@ const contactForm = ref({
   website: '',
 })
 
+const { formRef, errors, validate, clear, attrs, showSubmitError } = useInlineValidation({
+  nome: nameError,
+  mensagem: minLengthError('A mensagem', 10),
+})
+
 const isSending = ref(false)
 const messageSent = ref(false)
 const errorMessage = ref('')
+const needsHelp = ref(false) // o servidor não respondeu: oferece WhatsApp e telefone
 
-const breadcrumbItems = [
-  { label: 'Início', to: { name: 'home' } },
-  { label: 'Contacto' },
-]
+const breadcrumbItems = [{ label: 'Início', to: { name: 'home' } }, { label: 'Contacto' }]
 
-const IDEMPOTENCY_STORAGE_KEY = 'diomika-contact-idempotency'
-
-const getOrCreateIdempotencyKey = () => {
-  let key = sessionStorage.getItem(IDEMPOTENCY_STORAGE_KEY)
-  if (!key) {
-    key = crypto.randomUUID()
-    sessionStorage.setItem(IDEMPOTENCY_STORAGE_KEY, key)
-  }
-  return key
-}
-
-const clearIdempotencyKey = () => {
-  sessionStorage.removeItem(IDEMPOTENCY_STORAGE_KEY)
-}
+const contactKey = formKey('diomika-contact-idempotency')
 
 const submitContact = async () => {
   if (contactForm.value.website) return
-  if (!requireToken()) {
+  if (!(await validate())) return
+  if (!(await requireToken())) {
     errorMessage.value = 'Confirme a verificação anti-spam antes de enviar.'
     return
   }
@@ -60,20 +58,35 @@ const submitContact = async () => {
   isSending.value = true
   messageSent.value = false
   errorMessage.value = ''
+  needsHelp.value = false
 
   try {
-    const idempotencyKey = getOrCreateIdempotencyKey()
-    await apiPost('/contacto', {
-      ...contactForm.value,
-      cf_turnstile_response: turnstileToken.value || null,
-    }, { idempotencyKey })
+    const idempotencyKey = contactKey.get()
+    await apiPost(
+      '/contacto',
+      {
+        ...contactForm.value,
+        contacto: contactForm.value.contacto.trim() || null, // o telefone é facultativo (LEGAL-13)
+        cf_turnstile_response: turnstileToken.value || null,
+        origem: readOrigem(readConsent() === 'accepted'),
+      },
+      { idempotencyKey },
+    )
     messageSent.value = true
     captureEvent('contact_message_sent')
-    clearIdempotencyKey()
-    contactForm.value = { nome: '', email: '', contacto: '', assunto: '', mensagem: '', website: '' }
+    contactKey.clear()
+    contactForm.value = {
+      nome: '',
+      email: '',
+      contacto: '',
+      assunto: '',
+      mensagem: '',
+      website: '',
+    }
     resetTurnstile()
   } catch (e) {
-    errorMessage.value = e.message || 'Erro ao enviar mensagem.'
+    errorMessage.value = await showSubmitError(e, 'Erro ao enviar mensagem.')
+    needsHelp.value = Boolean(e.network || e.status >= 500)
     resetTurnstile()
   } finally {
     isSending.value = false
@@ -88,16 +101,28 @@ const submitContact = async () => {
     <div class="page-shell contact-wrap">
       <h1 class="page-title">Contacto</h1>
       <div class="direct-actions">
-        <a class="btn btn-secondary" :href="`tel:${COMPANY.phoneTel}`">Ligar {{ COMPANY.phoneDisplay }}</a>
-        <a class="btn btn-primary" :href="whatsappUrl('Olá! Gostaria de falar com a Diomika.')" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+        <CallButton class="btn btn-secondary">Ligar {{ COMPANY.phoneDisplay }}</CallButton>
+        <a
+          class="btn btn-primary"
+          :href="whatsappUrl('Olá! Gostaria de falar com a Diomika.')"
+          target="_blank"
+          rel="noopener noreferrer"
+          >WhatsApp</a
+        >
       </div>
 
       <p class="privacy-note">
-        Usamos estes dados só para responder ao pedido.
-        <RouterLink to="/privacidade">Privacidade</RouterLink>.
+        Usamos estes dados para lhe responder.
+        <RouterLink to="/privacidade">Política de Privacidade</RouterLink>.
       </p>
 
-      <form class="contact-form" @submit.prevent="submitContact">
+      <form
+        ref="formRef"
+        class="contact-form"
+        novalidate
+        @submit.prevent="submitContact"
+        @input="clear($event.target.id)"
+      >
         <input
           v-model="contactForm.website"
           type="text"
@@ -108,31 +133,102 @@ const submitContact = async () => {
           aria-hidden="true"
         />
 
+        <p class="required-note">Os campos com * são obrigatórios.</p>
+
         <div>
-          <label class="field-label" for="nome">Nome</label>
-          <input id="nome" v-model="contactForm.nome" class="field-input" placeholder="O seu nome" required maxlength="120" autocomplete="name" />
+          <label class="field-label" for="nome"
+            >Nome <span class="req" aria-hidden="true">*</span></label
+          >
+          <input
+            id="nome"
+            v-model="contactForm.nome"
+            class="field-input"
+            placeholder="O seu nome"
+            required
+            minlength="2"
+            maxlength="120"
+            autocomplete="name"
+            v-bind="attrs('nome')"
+          />
+          <p v-if="errors.nome" id="nome-erro" class="field-error">{{ errors.nome }}</p>
         </div>
         <div>
-          <label class="field-label" for="email">Email</label>
-          <input id="email" v-model="contactForm.email" class="field-input" type="email" placeholder="email@empresa.pt" required autocomplete="email" />
+          <label class="field-label" for="email"
+            >Email <span class="req" aria-hidden="true">*</span></label
+          >
+          <input
+            id="email"
+            v-model="contactForm.email"
+            class="field-input"
+            type="email"
+            placeholder="email@empresa.pt"
+            required
+            pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
+            autocomplete="email"
+            data-erro="Indique um email válido, por exemplo nome@empresa.pt."
+            v-bind="attrs('email')"
+          />
+          <p v-if="errors.email" id="email-erro" class="field-error">{{ errors.email }}</p>
         </div>
         <div>
-          <label class="field-label" for="contacto">Telefone</label>
-          <input id="contacto" v-model="contactForm.contacto" class="field-input" type="tel" inputmode="tel" placeholder="912 345 678" required maxlength="20" autocomplete="tel" />
+          <label class="field-label" for="contacto"
+            >Telefone <span class="field-optional">(opcional)</span></label
+          >
+          <input
+            id="contacto"
+            v-model="contactForm.contacto"
+            class="field-input"
+            type="tel"
+            inputmode="tel"
+            placeholder="912 345 678"
+            maxlength="20"
+            autocomplete="tel"
+            v-bind="attrs('contacto')"
+          />
+          <p v-if="errors.contacto" id="contacto-erro" class="field-error">{{ errors.contacto }}</p>
         </div>
         <div>
-          <label class="field-label" for="assunto">Assunto</label>
-          <input id="assunto" v-model="contactForm.assunto" class="field-input" placeholder="Motivo do contacto" required maxlength="200" />
+          <label class="field-label" for="assunto"
+            >Assunto <span class="field-optional">(opcional)</span></label
+          >
+          <input
+            id="assunto"
+            v-model="contactForm.assunto"
+            class="field-input"
+            placeholder="Motivo do contacto"
+            maxlength="200"
+            v-bind="attrs('assunto')"
+          />
+          <p v-if="errors.assunto" id="assunto-erro" class="field-error">{{ errors.assunto }}</p>
         </div>
         <div>
-          <label class="field-label" for="mensagem">Mensagem</label>
-          <textarea id="mensagem" v-model="contactForm.mensagem" class="field-textarea" placeholder="Como podemos ajudar?" required rows="6" maxlength="5000" />
+          <label class="field-label" for="mensagem"
+            >Mensagem <span class="req" aria-hidden="true">*</span></label
+          >
+          <textarea
+            id="mensagem"
+            v-model="contactForm.mensagem"
+            class="field-textarea"
+            placeholder="Como podemos ajudar?"
+            required
+            rows="6"
+            maxlength="5000"
+            v-bind="attrs('mensagem')"
+          />
+          <p v-if="errors.mensagem" id="mensagem-erro" class="field-error">{{ errors.mensagem }}</p>
         </div>
 
         <div v-if="turnstileEnabled" ref="turnstileEl" class="turnstile-wrap" />
-        <p v-if="turnstileLoadError" class="alert alert-error" role="alert">{{ turnstileLoadError }}</p>
+        <p v-if="turnstileLoadError" class="alert alert-error" role="alert">
+          {{ turnstileLoadError }}
+        </p>
 
-        <button type="submit" class="btn btn-primary btn-block" :disabled="isSending" :aria-busy="isSending">
+        <button
+          type="submit"
+          class="btn btn-primary btn-block"
+          :disabled="isSending"
+          :aria-busy="isSending"
+        >
           {{ isSending ? 'A enviar…' : 'Enviar mensagem' }}
         </button>
 
@@ -140,6 +236,10 @@ const submitContact = async () => {
           Mensagem enviada. Entraremos em contacto em breve.
         </p>
         <p v-if="errorMessage" class="alert alert-error" role="alert">{{ errorMessage }}</p>
+        <ContactAlternatives
+          v-if="needsHelp || turnstileLoadError"
+          whatsapp-text="Olá! Não consegui enviar a mensagem pelo site Diomika."
+        />
       </form>
     </div>
   </div>
@@ -148,7 +248,7 @@ const submitContact = async () => {
 <style scoped>
 .contact-page {
   padding-bottom: 2rem;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .contact-wrap {
@@ -156,13 +256,25 @@ const submitContact = async () => {
   padding-top: 2rem;
 }
 
-.direct-actions { display: flex; flex-wrap: wrap; gap: 0.65rem; margin: 0.75rem 0 1.25rem; }
+.direct-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin: 0.75rem 0 1.25rem;
+}
 
 .privacy-note {
   font-size: 0.9rem;
   color: var(--color-muted);
   line-height: 1.5;
   margin: 0 0 1.25rem;
+}
+
+.required-note {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-muted);
 }
 
 .contact-form {

@@ -13,20 +13,23 @@ const props = defineProps({
   imgClass: { type: String, default: '' },
   /** Pede a miniatura; se faltar, cai no original. */
   thumb: { type: Boolean, default: false },
+  /** Largura da miniatura com `thumb` (480 por omissão; 160 nos botões de cor). */
+  thumbWidth: { type: Number, default: 480 },
   /** Com `sizes`, oferece miniatura (480w) e original ao browser, que escolhe pelo ecrã. */
   sizes: { type: String, default: undefined },
 })
 
 const loaded = ref(false)
 const original = () => normalizeStorageUrl(props.src)
-const first = () => (props.thumb ? thumbUrl(original()) : original()) || PLACEHOLDER
+const first = () =>
+  (props.thumb ? thumbUrl(original(), props.thumbWidth) : original()) || PLACEHOLDER
 const current = ref(first())
 const srcset = ref(null)
 const setSrcset = () => {
   const o = original()
   const t = thumbUrl(o)
-  // Originais limitados a 1600 px no upload (image_resize.MAX_DIMENSION)
-  srcset.value = props.sizes && o && t !== o ? `${t} 480w, ${thumbUrl(o, 960)} 960w, ${o} 1600w` : null
+  // Nunca o original no srcset: pesa até 2 MB e um telemóvel de ecrã 3x chegava a pedi-lo (PERF-02). 960 px chega.
+  srcset.value = props.sizes && o && t !== o ? `${t} 480w, ${thumbUrl(o, 960)} 960w` : null
 }
 setSrcset()
 
@@ -49,6 +52,18 @@ function onError() {
     srcset.value = null
     current.value = original()
     return
+  }
+  // Miniatura pequena ainda por gerar (as imagens antigas): a de 480 antes do original, que pesa muito mais.
+  if (
+    props.thumb &&
+    props.thumbWidth < 480 &&
+    current.value === thumbUrl(original(), props.thumbWidth)
+  ) {
+    const fallback = thumbUrl(original())
+    if (fallback !== current.value) {
+      current.value = fallback
+      return
+    }
   }
   // Miniatura em falta → original; depois placeholder (sem loops)
   if (props.src && current.value !== original() && !String(current.value).includes('placeholder')) {
@@ -89,14 +104,19 @@ function onError() {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: linear-gradient(120deg, var(--color-bg-soft) 25%, var(--color-bg) 37%, var(--color-bg-soft) 63%);
+  background: linear-gradient(
+    120deg,
+    var(--color-bg-soft) 25%,
+    var(--color-bg) 37%,
+    var(--color-bg-soft) 63%
+  );
   background-size: 200% 100%;
-  animation: soft-shimmer 1.1s ease-in-out infinite;
+  animation: shimmer 1.1s ease-in-out infinite;
 }
 
 .soft-image.is-loaded {
   animation: none;
-  background: transparent;
+  background: var(--color-photo-bg);
 }
 
 .soft-image__skeleton {
@@ -115,11 +135,6 @@ function onError() {
 
 .soft-image.is-loaded .soft-image__img {
   opacity: 1;
-}
-
-@keyframes soft-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

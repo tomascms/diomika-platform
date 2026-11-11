@@ -6,12 +6,16 @@ import logging
 import os
 import threading
 import time
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger("background-workers")
 
 _stop = threading.Event()
 _threads: list[threading.Thread] = []
 _lock_handle = None
+
+# Sem ciclo IMAP concluído há mais do que isto → alerta (API-01: ~4 dias parado e ninguém soube).
+_EMAIL_STALE_AFTER = timedelta(minutes=10)
 
 
 def _acquire_single_runner_lock() -> bool:
@@ -50,12 +54,14 @@ def should_run_embedded() -> bool:
 
 
 def _email_loop() -> None:
+    from utils import gmail_api
     from workers.email_worker import process_inbox
 
     poll = int(os.getenv("EMAIL_POLL_SECONDS", "30"))
     logger.info("Email worker embutido (poll=%ss)", poll)
     while not _stop.is_set():
         try:
+            gmail_api.keepalive()
             process_inbox()
         except Exception as exc:
             logger.error("Email worker: %s", exc)
@@ -77,7 +83,21 @@ def _outbox_loop() -> None:
         _stop.wait(poll)
 
 
+def _last_email_poll() -> datetime | None:
+    """Fim do último ciclo IMAP concluído, lido do heartbeat que o worker já escreve (o mesmo
+    leitor do /health/detail). None se ainda não há ficheiro.
+
+    ponytail: contentor novo sem nenhum ciclo concluído (IMAP em baixo desde o arranque) não alerta,
+    só o /health/detail o mostra; para o apanhar é preciso contar desde o arranque do processo.
+    """
+    from core.health import _worker_status
+
+    last = _worker_status()["last_poll"]
+    return datetime.fromisoformat(last) if last else None
+
+
 def _maintenance_loop() -> None:
+    from core.alerts import send_alert
     from core.idempotency_maintenance import purge_expired_idempotency_keys
     from core.retention import purge_expired_pii
     from core.saga.maintenance import sweep_zombie_sagas
@@ -85,8 +105,22 @@ def _maintenance_loop() -> None:
     poll = int(os.getenv("SAGA_SWEEP_SECONDS", "300"))
     retention_every = max(1, int(os.getenv("RETENTION_SWEEP_CYCLES", "12")))  # ~1h se poll=300
     cycle = 0
-    logger.info("Manutenção embutida (sagas + idempotency + retention, poll=%ss)", poll)
+    email_stalled = False  # paragem em curso (já alertada): 1 alerta por episódio, não 1 por volta
+    logger.info("Manutenção embutida (sagas + idempotency + retention + vigia do email, poll=%ss)", poll)
     while not _stop.is_set():
+        try:
+            last_poll = _last_email_poll()
+            stalled = last_poll is not None and datetime.now(timezone.utc) - last_poll > _EMAIL_STALE_AFTER
+            if stalled and not email_stalled:
+                send_alert(
+                    "Worker de email parado",
+                    severity="critical",
+                    detail={"last_poll": last_poll.isoformat()},
+                    dedupe_seconds=0,  # já é 1 por episódio; um 2.º episódio dentro de 10 min também tem de sair
+                )
+            email_stalled = stalled  # volta a armar quando o heartbeat recupera
+        except Exception as exc:
+            logger.error("Heartbeat do worker de email: %s", exc)
         try:
             n = sweep_zombie_sagas()
             if n:

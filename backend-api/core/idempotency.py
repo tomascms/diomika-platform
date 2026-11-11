@@ -10,7 +10,9 @@ from core.resilience import log_idempotency
 
 logger = logging.getLogger("diomika-api")
 
-_STALE_PROCESSING_SECONDS = 30
+# Acima do pior caso do SMTP lento (timeout 30 s × 3 + esperas, ~93 s) e da loja (aborta aos 25 s e repete com a mesma chave):
+# a 30 s o reenvio passava a «proceed» e gravava uma 2.ª mensagem (API-07).
+_STALE_PROCESSING_SECONDS = 120
 
 
 def _parse_ts(value: str | None) -> datetime | None:

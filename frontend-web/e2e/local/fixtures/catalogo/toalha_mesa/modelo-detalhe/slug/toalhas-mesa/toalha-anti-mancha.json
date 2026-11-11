@@ -1,0 +1,144 @@
+{
+  "material": null,
+  "dimensoes": [
+    "160x160",
+    "160x200",
+    "160x250",
+    "160x300"
+  ],
+  "composicao": {
+    "Poliéster": 100
+  },
+  "tipo_produto": "toalha",
+  "id": "5988ed69-c72b-417e-9227-43a01abe63ba",
+  "id_categoria": "6496fab1-a7f0-413d-985f-64306a153ed0",
+  "tipo_catalogo": "toalha_mesa",
+  "nome": "Toalha Anti-Mancha",
+  "slug": "toalha-anti-mancha",
+  "descricao": "Sem descrição",
+  "attributes": {
+    "material": null,
+    "dimensoes": [
+      "160x160",
+      "160x200",
+      "160x250",
+      "160x300"
+    ],
+    "composicao": {
+      "Poliéster": 100
+    },
+    "tipo_produto": "toalha"
+  },
+  "visibilidade": true,
+  "created_at": "2026-08-28T14:08:26.180653+00:00",
+  "updated_at": "2026-10-03T16:21:04.216871+00:00",
+  "categories": {
+    "id": "6496fab1-a7f0-413d-985f-64306a153ed0",
+    "nome": "Toalhas de Mesa",
+    "carrinho_step": 6,
+    "carrinho_min": 6,
+    "slug": "toalhas-mesa",
+    "tipo_catalogo": "toalha_mesa"
+  },
+  "product_variants": [
+    {
+      "dimensoes": "160x160",
+      "id": "fdbba13d-83ce-4875-bc65-0f2c23fd7383",
+      "ean": "5606044500893",
+      "id_modelo": "5988ed69-c72b-417e-9227-43a01abe63ba",
+      "attributes": {
+        "dimensoes": "160x160"
+      },
+      "created_at": "2026-08-28T14:30:24.312625+00:00",
+      "updated_at": "2026-10-03T16:21:04.882963+00:00",
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500893.png?token=expirado",
+      "visibilidade": true,
+      "tipo_catalogo": "toalha_mesa"
+    },
+    {
+      "dimensoes": "160x200",
+      "id": "d5df0826-d123-4698-b5ad-7dd274be68cb",
+      "ean": "5606044500886",
+      "id_modelo": "5988ed69-c72b-417e-9227-43a01abe63ba",
+      "attributes": {
+        "dimensoes": "160x200"
+      },
+      "created_at": "2026-08-28T14:30:41.604872+00:00",
+      "updated_at": "2026-10-03T16:21:04.882963+00:00",
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500886.png?token=expirado",
+      "visibilidade": true,
+      "tipo_catalogo": "toalha_mesa"
+    },
+    {
+      "dimensoes": "160x250",
+      "id": "508e4f3b-dd87-4cb9-9f4c-4ebf865be177",
+      "ean": "5606044500879",
+      "id_modelo": "5988ed69-c72b-417e-9227-43a01abe63ba",
+      "attributes": {
+        "dimensoes": "160x250"
+      },
+      "created_at": "2026-08-28T14:30:58.32724+00:00",
+      "updated_at": "2026-10-03T16:21:04.882963+00:00",
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500879.png?token=expirado",
+      "visibilidade": true,
+      "tipo_catalogo": "toalha_mesa"
+    },
+    {
+      "dimensoes": "160x300",
+      "id": "d842c248-bd71-4c45-9f59-1813b47530d0",
+      "ean": "5606044500862",
+      "id_modelo": "5988ed69-c72b-417e-9227-43a01abe63ba",
+      "attributes": {
+        "dimensoes": "160x300"
+      },
+      "created_at": "2026-08-28T14:31:15.25365+00:00",
+      "updated_at": "2026-10-03T16:21:04.882963+00:00",
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500862.png?token=expirado",
+      "visibilidade": true,
+      "tipo_catalogo": "toalha_mesa"
+    }
+  ],
+  "modelo_cores": [
+    {
+      "id_modelo": "5988ed69-c72b-417e-9227-43a01abe63ba",
+      "numero": 1,
+      "nome": "Sortido",
+      "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_toalha_mesa_cores/imagem/f57130828e934f0b8c40424f689dd1f0.png",
+      "visibilidade": true
+    }
+  ],
+  "_tipo_catalogo": "toalha_mesa",
+  "_storefront": {
+    "mode": "variantes",
+    "product_table": "product_variants",
+    "picker": {
+      "source": "products",
+      "field": "dimensoes",
+      "label": "Dimensão (comprimento×largura)",
+      "format": "dimensions",
+      "suffix": " cm"
+    },
+    "specs": [
+      {
+        "field": "composicao",
+        "label": "Composição (%) — igual para todas as cores",
+        "widget": "composition",
+        "enum_labels": {}
+      },
+      {
+        "field": "dimensoes",
+        "label": "Dimensões (comprimento×largura)",
+        "widget": "dimension_list",
+        "enum_labels": {}
+      }
+    ],
+    "badge": {
+      "field": "tipo_produto",
+      "labels": {
+        "toalha": "Toalha de mesa",
+        "protetor": "Protetor de mesa"
+      }
+    }
+  },
+  "_storefront_mode": "variantes"
+}

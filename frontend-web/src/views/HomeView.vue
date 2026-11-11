@@ -1,22 +1,45 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useCategories } from '@/composables/useCategories'
 import { categoryProductsRoute } from '@/lib/catalogRoutes'
-import { COMPANY, whatsappUrl } from '@/lib/constants'
+import { pretty } from '@/lib/describe'
+import { MIN_ORDER, whatsappUrl } from '@/lib/constants'
+import CallButton from '@/components/CallButton.vue'
+import ErrorState from '@/components/ErrorState.vue'
 import SoftImage from '@/components/SoftImage.vue'
 
 const { categories, loading, error, load } = useCategories()
 
-const pretty = (name) => {
-  const t = String(name || '').trim()
-  return t ? t.charAt(0).toUpperCase() + t.slice(1) : ''
-}
-
 const withImage = computed(() => categories.value.filter((c) => c.imagem))
 /** Até três imagens reais de categorias para o mosaico do topo. */
 const heroTiles = computed(() => withImage.value.slice(0, 3))
-const featured = computed(() => categories.value.slice(0, 6))
+
+// Carrossel: scroll-snap em CSS (quatro por vez; menos no telemóvel) e botões que andam uma «página» de cada vez.
+const scroller = ref(null)
+const canPrev = ref(false)
+const canNext = ref(false)
+const updateArrows = () => {
+  const el = scroller.value
+  if (!el) return
+  canPrev.value = el.scrollLeft > 1
+  canNext.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+}
+const page = (direction) => {
+  const el = scroller.value
+  if (!el) return
+  // Uma página = a largura visível mais um intervalo: cada paragem fica no início de uma categoria.
+  el.scrollBy({
+    left: direction * (el.clientWidth + parseFloat(getComputedStyle(el).columnGap || 0)),
+  })
+}
+watch(
+  () => categories.value.length,
+  () => nextTick(updateArrows),
+  { flush: 'post' },
+)
+onMounted(() => window.addEventListener('resize', updateArrows))
+onUnmounted(() => window.removeEventListener('resize', updateArrows))
 </script>
 
 <template>
@@ -24,7 +47,7 @@ const featured = computed(() => categories.value.slice(0, 6))
     <section class="hero">
       <div class="hero-inner">
         <div class="hero-copy">
-          <h1>Têxteis para o lar, prontos para a sua loja.</h1>
+          <h1>Têxteis para o lar, com proposta à medida.</h1>
           <p class="hero-lead">
             Almofadas, assentos, toalhas de mesa, aventais e mais. Escolha modelos, cores e medidas
             e receba uma proposta comercial à medida.
@@ -33,7 +56,9 @@ const featured = computed(() => categories.value.slice(0, 6))
             <RouterLink to="/categorias" class="btn btn-primary">Ver catálogo</RouterLink>
             <RouterLink to="/contacto" class="btn btn-secondary">Falar connosco</RouterLink>
           </div>
-          <p class="hero-note">Pedido mínimo de 500&nbsp;€ + IVA · Sem preços públicos: cada proposta é feita para si.</p>
+          <p class="hero-note">
+            Para lojas, hotelaria e particulares · pedido mínimo {{ MIN_ORDER }}
+          </p>
         </div>
 
         <div class="hero-visual" aria-hidden="true">
@@ -86,20 +111,73 @@ const featured = computed(() => categories.value.slice(0, 6))
       <div class="page-shell">
         <div class="section-head">
           <h2 id="catalog-title" class="section-title">Catálogo</h2>
-          <RouterLink to="/categorias" class="btn btn-ghost">Ver todas as categorias</RouterLink>
+          <div class="section-tools">
+            <RouterLink to="/categorias" class="btn btn-ghost">Ver todas</RouterLink>
+            <template v-if="categories.length > 1">
+              <button
+                type="button"
+                class="carousel-btn"
+                aria-label="Categorias anteriores"
+                :disabled="!canPrev"
+                @click="page(-1)"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="m15 18-6-6 6-6" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                class="carousel-btn"
+                aria-label="Categorias seguintes"
+                :disabled="!canNext"
+                @click="page(1)"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              </button>
+            </template>
+          </div>
         </div>
 
-        <div v-if="loading && !categories.length" class="cat-grid" aria-busy="true" aria-label="A carregar categorias">
-          <span v-for="n in 3" :key="n" class="cat-skeleton" />
+        <div
+          v-if="loading && !categories.length"
+          class="cat-grid"
+          aria-busy="true"
+          aria-label="A carregar categorias"
+        >
+          <span v-for="n in 4" :key="n" class="cat-skeleton skeleton" />
         </div>
 
-        <div v-else-if="error && !categories.length" class="alert alert-error load-error" role="alert">
-          <p>Não foi possível carregar o catálogo.</p>
-          <button type="button" class="btn btn-secondary btn-sm" @click="load(true)">Tentar de novo</button>
-        </div>
+        <ErrorState v-else-if="error && !categories.length" @retry="load(true)" />
 
-        <ul v-else-if="featured.length" class="cat-grid">
-          <li v-for="cat in featured" :key="cat.id">
+        <ul
+          v-else-if="categories.length"
+          ref="scroller"
+          class="cat-grid"
+          @scroll.passive="updateArrows"
+        >
+          <li v-for="cat in categories" :key="cat.id">
             <RouterLink :to="categoryProductsRoute(cat)" class="cat-tile">
               <span class="cat-media">
                 <SoftImage v-if="cat.imagem" :src="cat.imagem" alt="" img-class="cat-img" thumb />
@@ -116,11 +194,17 @@ const featured = computed(() => categories.value.slice(0, 6))
       <div class="contact-inner">
         <div>
           <h2 id="help-title">Precisa de ajuda a escolher?</h2>
-          <p>Fale directamente com a equipa comercial — por telefone, WhatsApp ou mensagem.</p>
+          <p>Fale diretamente com a equipa comercial — por telefone, WhatsApp ou mensagem.</p>
         </div>
         <div class="contact-actions">
-          <a :href="`tel:${COMPANY.phoneTel}`" class="btn btn-hero">{{ COMPANY.phoneDisplay }}</a>
-          <a :href="whatsappUrl('Olá! Gostaria de pedir um orçamento.')" class="btn btn-hero-outline" target="_blank" rel="noopener">WhatsApp</a>
+          <CallButton class="btn btn-hero" />
+          <a
+            :href="whatsappUrl('Olá! Gostaria de pedir um orçamento.')"
+            class="btn btn-hero-outline"
+            target="_blank"
+            rel="noopener"
+            >WhatsApp</a
+          >
           <RouterLink to="/contacto" class="btn btn-hero-outline">Enviar mensagem</RouterLink>
         </div>
       </div>
@@ -247,13 +331,18 @@ const featured = computed(() => categories.value.slice(0, 6))
 
 .steps li {
   padding-top: 1.25rem;
-  border-top: 2px solid var(--color-ink-deep);
+  border-top: 3px solid var(--brand-blue);
 }
 
 .step-n {
-  display: block;
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
   margin-bottom: 0.75rem;
-  color: var(--color-accent);
+  border-radius: 50%;
+  background: var(--brand-blue);
+  color: #fff;
   font-size: 0.95rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -270,8 +359,9 @@ const featured = computed(() => categories.value.slice(0, 6))
 }
 
 /* ---------- Catálogo ---------- */
-.catalog-section .page-shell {
-  padding-top: 0;
+/* Faixa azul-clara nos passos: alterna com o branco do catálogo. */
+.steps-section {
+  background: var(--color-accent-soft);
 }
 
 .section-head {
@@ -286,13 +376,76 @@ const featured = computed(() => categories.value.slice(0, 6))
   margin: 0;
 }
 
+.section-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.carousel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.carousel-btn:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.carousel-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Quatro por vista; o espaço em baixo deixa ver o foco sem o cortar. */
 .cat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
-  gap: 1.25rem;
+  --per-view: 4;
+  --gap: 1.25rem;
+  display: flex;
+  gap: var(--gap);
   margin: 0;
-  padding: 0;
+  padding: 4px 0 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
   list-style: none;
+}
+
+.cat-grid::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cat-grid {
+    scroll-behavior: smooth;
+  }
+}
+
+.cat-grid > * {
+  flex: 0 0 calc((100% - (var(--per-view) - 1) * var(--gap)) / var(--per-view));
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+@media (max-width: 900px) {
+  .cat-grid {
+    --per-view: 2;
+  }
+}
+
+@media (max-width: 520px) {
+  .cat-grid {
+    --per-view: 1.25;
+  }
 }
 
 .cat-tile {
@@ -351,26 +504,6 @@ const featured = computed(() => categories.value.slice(0, 6))
   display: block;
   aspect-ratio: 4 / 3;
   border-radius: var(--radius-lg);
-  background: linear-gradient(90deg, var(--color-bg-soft), var(--color-bg), var(--color-bg-soft));
-  background-size: 200% 100%;
-  animation: shimmer 1.3s ease-in-out infinite;
-}
-
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-.load-error {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.load-error p {
-  margin: 0;
 }
 
 /* ---------- Contacto ---------- */
@@ -401,6 +534,7 @@ const featured = computed(() => categories.value.slice(0, 6))
 .contact-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: 0.75rem;
 }
 
@@ -432,16 +566,6 @@ const featured = computed(() => categories.value.slice(0, 6))
 
   .hero-actions .btn {
     flex: 1 1 auto;
-  }
-
-  .section-head {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
-  }
-
-  .section-head .btn {
-    padding-left: 0;
   }
 }
 </style>

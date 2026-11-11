@@ -127,3 +127,29 @@ def test_storefront_page_limit_covers_the_whole_catalogue():
 
     assert DEFAULT_PAGE_LIMIT >= 100
     assert MAX_PAGE_LIMIT >= DEFAULT_PAGE_LIMIT
+
+
+def test_list_select_only_asks_for_existing_columns_outside_catalog():
+    """Pedir uma coluna que a tabela não tem dá 500 (encomendas_internas pedia `nome`)."""
+    from models.catalog_registry import admin_list_select_query, physical_table_for
+    from core.auth import CRUD_INFRA_BLOCKED
+    from models.schemas import TABLE_MAP
+
+    for table, cfg in TABLE_MAP.items():
+        schema = cfg.get("schema")
+        if not schema or physical_table_for(table) != table or table in ("categories", *CRUD_INFRA_BLOCKED):
+            continue
+        cols = {c.strip() for c in admin_list_select_query(table).split(",") if "(" not in c}
+        known = set(schema.model_fields) | {"created_at", "vendido_em"}
+        assert cols <= known, f"{table}: {sorted(cols - known)}"
+
+
+def test_form_round_trip_shows_and_saves_attribute_fields():
+    """Produto existente abria com «Dimensão» vazia (valor em attributes) e a edição perdia-se no fold."""
+    from models.catalog_registry import fold_attributes, unfold_attributes
+
+    rec = {"id": "x", "ean": "1", "attributes": {"dimensoes": "140x200", "outro": 1}}
+    shown = unfold_attributes("toalha_mesa", rec, ["id_modelo", "ean", "dimensoes"])
+    assert shown["dimensoes"] == "140x200" and shown["attributes"] == {"outro": 1}
+    saved = fold_attributes("toalha_mesa", {**shown, "dimensoes": "140x250"})
+    assert saved["attributes"] == {"dimensoes": "140x250", "outro": 1} and "dimensoes" not in saved

@@ -1,13 +1,16 @@
 import { ref } from 'vue'
 
-import { apiGet } from '@/lib/api'
+import { ApiError, apiGet } from '@/lib/api'
 import {
   catalogueModelsForCategory,
+  getCategoryBySlug,
   modelDetailAuto,
   modelDetailForSlugs,
   modelDetailForTipo,
 } from '@/lib/catalogSupabase'
+import { withDatabaseFallback } from '@/lib/catalogFallback'
 import { getCatalogMeta, setLiveCatalogMeta } from '@/lib/catalogMeta'
+import { sessionStore } from '@/lib/storage'
 import { supabaseConfigured } from '@/lib/supabase'
 
 import {
@@ -33,9 +36,8 @@ function listCacheId(tipo, categoryId, activeFilters) {
 }
 
 function readListCache(id, maxAgeMs = LIST_FRESH_MS) {
-  if (typeof sessionStorage === 'undefined') return null
   try {
-    const raw = sessionStorage.getItem(LIST_CACHE_KEY)
+    const raw = sessionStore.get(LIST_CACHE_KEY)
     if (!raw) return null
     const bag = JSON.parse(raw)
     const row = bag?.[id]
@@ -47,9 +49,9 @@ function readListCache(id, maxAgeMs = LIST_FRESH_MS) {
 }
 
 function writeListCache(id, data) {
-  if (typeof sessionStorage === 'undefined' || !Array.isArray(data)) return
+  if (!Array.isArray(data)) return
   try {
-    const raw = sessionStorage.getItem(LIST_CACHE_KEY)
+    const raw = sessionStore.get(LIST_CACHE_KEY)
     const bag = raw ? JSON.parse(raw) : {}
     bag[id] = { data, at: Date.now() }
     const keys = Object.keys(bag)
@@ -57,9 +59,9 @@ function writeListCache(id, data) {
       keys.sort((a, b) => (bag[a].at || 0) - (bag[b].at || 0))
       keys.slice(0, keys.length - 60).forEach((k) => delete bag[k])
     }
-    sessionStorage.setItem(LIST_CACHE_KEY, JSON.stringify(bag))
+    sessionStore.set(LIST_CACHE_KEY, JSON.stringify(bag))
   } catch {
-    /* quota */
+    /* JSON ilegível */
   }
 }
 
@@ -126,7 +128,12 @@ export function useCatalog() {
     return qs ? `?${qs}` : ''
   }
 
-  const fetchCategoryModels = async (tipo, categoryId, activeFilters = null, { force = false } = {}) => {
+  const fetchCategoryModels = async (
+    tipo,
+    categoryId,
+    activeFilters = null,
+    { force = false } = {},
+  ) => {
     await loadMeta()
 
     const cacheId = listCacheId(tipo, categoryId, activeFilters)
@@ -160,24 +167,40 @@ export function useCatalog() {
     }
   }
 
+  // A tradução slug → categoria também tem recurso (FE-13): sem ela, com a API em baixo e a lista de categorias ainda
+  // por chegar, a página de categoria falhava mesmo havendo recurso para o resto do catálogo.
+  const fetchCategoryBySlug = (slug) =>
+    withDatabaseFallback(
+      () => apiGet(`/categorias/slug/${encodeURIComponent(slug)}`),
+      () => getCategoryBySlug(slug),
+      { configured: supabaseConfigured },
+    )
+
   const searchCatalog = async (query, { limit = 40 } = {}) => {
     const q = String(query || '').trim()
     if (q.length < 2) return []
     return apiGet(`/catalogo/search?q=${encodeURIComponent(q)}&limit=${limit}`)
   }
 
-  const fetchModelDetail = async ({ categorySlug = null, modelSlug = null, modelId = null, tipo = null } = {}) => {
+  const fetchModelDetail = async ({
+    categorySlug = null,
+    modelSlug = null,
+    modelId = null,
+    tipo = null,
+  } = {}) => {
     if (categorySlug && modelSlug) {
       try {
         const resolvedTipo =
-          tipo || (await apiGet(`/categorias/slug/${encodeURIComponent(categorySlug)}`)).tipo_catalogo
+          tipo ||
+          (await apiGet(`/categorias/slug/${encodeURIComponent(categorySlug)}`)).tipo_catalogo
         const data = await apiGet(
           `/catalogo/${encodeURIComponent(resolvedTipo)}/modelo-detalhe/slug/${encodeURIComponent(categorySlug)}/${encodeURIComponent(modelSlug)}`,
         )
         return {
           ...data,
           _tipo_catalogo: data._tipo_catalogo || resolvedTipo,
-          _storefront_mode: data._storefront_mode || storefrontMode(data._tipo_catalogo || resolvedTipo),
+          _storefront_mode:
+            data._storefront_mode || storefrontMode(data._tipo_catalogo || resolvedTipo),
         }
       } catch (apiErr) {
         if (!supabaseConfigured) throw apiErr
@@ -210,21 +233,21 @@ export function useCatalog() {
       if (categorySlug && modelSlug) {
         data = await modelDetailForSlugs(categorySlug, modelSlug, tipo)
       } else if (modelId) {
-        data = tipo
-          ? await modelDetailForTipo(tipo, modelId)
-          : await modelDetailAuto(modelId)
+        data = tipo ? await modelDetailForTipo(tipo, modelId) : await modelDetailAuto(modelId)
       }
-      if (!data) throw new Error('Modelo não encontrado.')
+      // Em produção a loja também consulta a BD quando a API falha: aqui «não há» é um 404, não «o servidor não respondeu».
+      if (!data) throw new ApiError('Modelo não encontrado.', { status: 404 })
       const resolvedTipo = data._tipo_catalogo || tipo
       return {
         ...data,
         _tipo_catalogo: resolvedTipo,
         _storefront_mode:
-          data._storefront_mode || (resolvedTipo ? storefrontMode(resolvedTipo) : data._storefront_mode),
+          data._storefront_mode ||
+          (resolvedTipo ? storefrontMode(resolvedTipo) : data._storefront_mode),
       }
     }
 
-    throw new Error('Modelo não encontrado.')
+    throw new ApiError('Modelo não encontrado.', { status: 404 })
   }
 
   const buildPickerOptions = (model, ctx) => {
@@ -324,7 +347,6 @@ export function useCatalog() {
     ]
   }
 
-
   const prefetchCategoryModels = (tipo, categoryId, activeFilters = null) => {
     void fetchCategoryModels(tipo, categoryId, activeFilters).catch(() => {})
   }
@@ -339,6 +361,7 @@ export function useCatalog() {
     storefrontContext,
     badgeLabel,
     fetchCategoryModels,
+    fetchCategoryBySlug,
     prefetchCategoryModels,
     searchCatalog,
     fetchModelDetail,

@@ -1,95 +1,46 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { capturePageview, isPosthogReady } from '@/lib/posthog'
+import { noteVisit } from '@/lib/origem'
+import { readConsent } from '@/lib/consent'
+import { consumeReloadMark, installStaleChunkRecovery } from '@/lib/staleChunk'
+import { routes } from './routes'
+
+/**
+ * A página nova só monta depois de a rota (e os dados) carregarem: procurar a âncora logo a seguir à navegação
+ * não a encontra e o scroll não acontece. Espera até ~1,5 s.
+ */
+function waitForAnchor(id) {
+  return new Promise((resolve) => {
+    let tries = 30
+    const check = () => {
+      if (document.getElementById(id)) resolve(true)
+      else if (--tries <= 0) resolve(false)
+      else setTimeout(check, 50)
+    }
+    check()
+  })
+}
+
+// Se esta página abriu porque a anterior se recarregou sozinha (FE-12), a marca no endereço sai já, antes de o router o ler.
+const reloadedAt = consumeReloadMark()
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   scrollBehavior(to, _from, savedPosition) {
     if (to.hash) {
-      return {
-        el: to.hash,
-        behavior: 'smooth',
-        top: 80,
-      }
+      return waitForAnchor(to.hash.slice(1)).then((found) =>
+        found ? { el: to.hash, behavior: 'smooth', top: 80 } : { top: 0, behavior: 'instant' },
+      )
     }
     if (savedPosition) return savedPosition
-    return { top: 0 }
+    // Instantâneo (FE-17): com o `scroll-behavior: smooth` do CSS a página demorava 1 a 2 s a chegar ao topo.
+    return { top: 0, behavior: 'instant' }
   },
-  routes: [
-    {
-      path: '/',
-      name: 'home',
-      component: () => import('@/views/HomeView.vue'),
-    },
-    {
-      path: '/categorias',
-      name: 'categories',
-      component: () => import('@/views/CategoriesView.vue'),
-    },
-    {
-      path: '/categoria/:categorySlug',
-      name: 'products',
-      component: () => import('@/views/ProductsView.vue'),
-    },
-    {
-      path: '/categoria/:categorySlug/:modelSlug',
-      name: 'product-detail',
-      component: () => import('@/views/ProductDetailView.vue'),
-    },
-    {
-      path: '/produtos/:categorySlug',
-      redirect: (to) => ({
-        name: 'products',
-        params: { categorySlug: to.params.categorySlug },
-      }),
-    },
-    {
-      path: '/produto/:legacyModelId',
-      name: 'product-detail-legacy',
-      component: () => import('@/views/ProductDetailView.vue'),
-    },
-    {
-      path: '/pesquisa',
-      name: 'search',
-      component: () => import('@/views/SearchView.vue'),
-    },
-    {
-      path: '/carrinho',
-      name: 'cart',
-      component: () => import('@/views/CartView.vue'),
-    },
-    {
-      path: '/contacto',
-      name: 'contact',
-      component: () => import('@/views/ContactView.vue'),
-      alias: ['/contact'],
-    },
-    {
-      path: '/sobre',
-      name: 'about',
-      component: () => import('@/views/AboutView.vue'),
-    },
-    {
-      path: '/privacidade',
-      name: 'privacy',
-      component: () => import('@/views/PrivacyView.vue'),
-    },
-    {
-      path: '/termos',
-      name: 'terms',
-      component: () => import('@/views/TermsView.vue'),
-    },
-    {
-      path: '/cookies',
-      name: 'cookies',
-      component: () => import('@/views/CookiesView.vue'),
-    },
-    {
-      path: '/:pathMatch(.*)*',
-      name: 'not-found',
-      component: () => import('@/views/NotFoundView.vue'),
-    },
-  ],
+  routes,
 })
+
+// Separador aberto antes de um deploy: o ficheiro da página que se abre já não existe (FE-12).
+installStaleChunkRecovery(router, { reloadedAt })
 
 /** Pré-carrega chunks de rotas quentes (hover / idle). */
 export function prefetchRoute(name) {
@@ -121,6 +72,13 @@ function warmCatalogRoutes(currentName) {
 }
 
 router.afterEach((to) => {
+  noteVisit({
+    loc: window.location,
+    referrer: document.referrer,
+    routeName: to.name,
+    params: to.params,
+    allowed: readConsent() === 'accepted',
+  })
   if (isPosthogReady()) capturePageview()
   const run = () => warmCatalogRoutes(to.name)
   if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {

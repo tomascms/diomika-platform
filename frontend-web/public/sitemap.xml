@@ -6,7 +6,9 @@
   <url><loc>https://www.diomika.com/sobre</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://www.diomika.com/contacto</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://www.diomika.com/carrinho</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://www.diomika.com/perguntas-frequentes</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
   <url><loc>https://www.diomika.com/privacidade</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://www.diomika.com/termos</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://www.diomika.com/condicoes-de-venda</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://www.diomika.com/cookies</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
 </urlset>

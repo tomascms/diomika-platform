@@ -14,7 +14,8 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from uuid import uuid4
+from types import SimpleNamespace
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Request, UploadFile
 
@@ -29,6 +30,7 @@ from core.idempotency import (
     get_cached_response,
 )
 from core.local_only import admin_must_be_local
+from core.path_ids import UuidStr
 from models.catalog_registry import (
     admin_list_select_query,
     all_colors_tables,
@@ -67,6 +69,7 @@ from .admin_crud_publishing import (
     _cascade_category_visibility,
     _hide_catalog_children,
     _publish_catalog_children,
+    set_visibility_atomic,
 )
 from .admin_crud_validation import (
     _assert_model_category_tipo,
@@ -175,7 +178,7 @@ def list_relation_options(
     table_name: str,
     visible_only: bool = False,
     limit: int = 200,
-    id_modelo: str | None = None,
+    id_modelo: UuidStr | None = None,
 ):
     """Dropdowns leves — só id + label, sem embeds pesados."""
     _schema_for(table_name)
@@ -239,7 +242,7 @@ def list_records(
     visible_only: bool = False,
     limit: int = 100,
     offset: int = 0,
-    id_modelo: str | None = None,
+    id_modelo: UuidStr | None = None,
     q: str | None = None,
 ):
     _schema_for(table_name)
@@ -253,7 +256,7 @@ def list_records(
 
 
 @router.get("/{table_name}/{record_id}")
-def get_record(request: Request, table_name: str, record_id: str):
+def get_record(request: Request, table_name: str, record_id: UuidStr):
     _schema_for(table_name)
     assert_table_action(table_name, "read", _role(request))
     res = (
@@ -263,7 +266,16 @@ def get_record(request: Request, table_name: str, record_id: str):
     )
     if not res.data:
         raise HTTPException(status_code=404, detail="Registo não encontrado")
-    return res.data[0]
+    row = res.data[0]
+    if table_name == "pedidos_orcamento":
+        # Nome do modelo, cor e medida em cada linha (o PDF já usa o mesmo): sem isto só se vê «EAN … · cor 1» (RP-06).
+        from core.order_enrich import enrich_order_lines
+
+        try:
+            row["linhas_detalhe"] = enrich_order_lines(row.get("linhas") or [])
+        except Exception as exc:
+            logger.warning("Linhas do orçamento %s sem detalhe: %s", record_id, exc)
+    return row
 
 
 @router.post("/{table_name}")
@@ -322,8 +334,67 @@ def create_record(
         raise HTTPException(status_code=400, detail=detail) from exc
 
 
+@router.post("/{table_name}/bundle")
+def save_model_bundle(request: Request, table_name: str, body: dict):
+    """Grava um modelo com as suas cores e variantes numa só transacção (API-08).
+
+    Corpo: {model, colors, variants, delete_colors, delete_variants}. Uma falha a meio não deixa nada gravado
+    e a versão do catálogo muda uma só vez (a cache da edge não é invalidada N vezes por gravação).
+    """
+    from core.catalog_bundle import build_bundle, save_bundle
+
+    if table_name not in all_model_tables():
+        raise HTTPException(status_code=404, detail="Só os modelos de catálogo se gravam em conjunto")
+    model_in = body.get("model") if isinstance(body.get("model"), dict) else {}
+    model_id = str(model_in.get("id") or "").strip()
+    exists = False
+    if model_id:
+        try:
+            UUID(model_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Identificador do modelo inválido.") from None
+        # A acção vem da BD (mesma pesquisa com âmbito da família que as outras rotas), nunca do corpo do pedido.
+        rows = _scoped(_db_table(table_name).select("id"), table_name).eq("id", model_id).execute().data
+        if not rows:
+            raise HTTPException(status_code=404, detail="Registo não encontrado")
+        exists = True
+    assert_table_action(table_name, "update" if exists else "create", _role(request))
+    try:
+        param, model = build_bundle(table_name, body)
+        result = save_bundle(param)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        detail = _client_error(exc)
+        if _is_expected_client_conflict(exc):
+            logger.warning("Bundle %s: %s", table_name, detail)
+            raise HTTPException(status_code=409, detail=detail) from exc
+        logger.error("Bundle %s: %s", table_name, exc)
+        raise HTTPException(status_code=400, detail=detail) from exc
+    _invalidate_catalog_cache(table_name=table_name, record=model, record_id=model["id"])
+    _audit(
+        request,
+        "bundle_save",
+        table_name,
+        resource_id=model["id"],
+        colors=len(param["colors"]),
+        variants=len(param["variants"]),
+    )
+    for variant in param["variants"]:
+        _schedule_barcode_update(_variant_table(table_name), variant["id"], variant.get("ean"))
+    return {**result, "id": model["id"]}
+
+
+def _variant_table(model_table: str) -> str | None:
+    from models.catalog_registry import product_table_for_tipo
+
+    return product_table_for_tipo(tipo_for_table(model_table))
+
+
 @router.put("/{table_name}/{record_id}")
-def update_record(request: Request, table_name: str, record_id: str, body: dict):
+def update_record(request: Request, table_name: str, record_id: UuidStr, body: dict):
     schema_class = _schema_for(table_name)
     assert_table_action(table_name, "update", _role(request))
     try:
@@ -358,8 +429,22 @@ def update_record(request: Request, table_name: str, record_id: str, body: dict)
         raise HTTPException(status_code=400, detail=detail) from exc
 
 
+def _set_visibility(table_name: str, record_id: str, vis: bool) -> SimpleNamespace:
+    """Muda a visibilidade do registo. Modelos e categorias levam os filhos na mesma transacção (API-08)."""
+    rows = _scoped(_db_table(table_name).select("*"), table_name).eq("id", record_id).execute().data
+    if not rows:
+        raise HTTPException(status_code=404, detail="Registo não encontrado")
+    if table_name in all_model_tables():
+        set_visibility_atomic("model", record_id, vis)
+    elif table_name == "categories":
+        set_visibility_atomic("category", record_id, vis)
+    else:
+        _scoped(_db_table(table_name).update({"visibilidade": vis}), table_name).eq("id", record_id).execute()
+    return SimpleNamespace(data=[{**rows[0], "visibilidade": vis}])
+
+
 @router.patch("/{table_name}/{record_id}/visibility")
-def patch_visibility(request: Request, table_name: str, record_id: str, body: dict):
+def patch_visibility(request: Request, table_name: str, record_id: UuidStr, body: dict):
     """Alterna visibilidade sem revalidar o registo completo."""
     _schema_for(table_name)
     assert_table_action(table_name, "update", _role(request))
@@ -371,23 +456,14 @@ def patch_visibility(request: Request, table_name: str, record_id: str, body: di
             _assert_model_publishable(table_name, record_id)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-    res = _scoped(_db_table(table_name).update({"visibilidade": vis}), table_name).eq("id", record_id).execute()
-    if not res.data:
-        raise HTTPException(status_code=404, detail="Registo não encontrado")
-    if table_name in all_model_tables():
-        if vis:
-            _publish_catalog_children(table_name, record_id)
-        else:
-            _hide_catalog_children(table_name, record_id)
-    elif table_name == "categories":
-        _cascade_category_visibility(record_id, vis)
+    res = _set_visibility(table_name, record_id, vis)
     _invalidate_catalog_cache(table_name=table_name, record=res.data[0], record_id=record_id)
     _audit(request, "visibility", table_name, resource_id=record_id, visibilidade=vis)
     return (res.data or [{"id": record_id, "visibilidade": vis}])[0]
 
 
 @router.post("/{table_name}/{record_id}/publish")
-def publish_record(request: Request, table_name: str, record_id: str):
+def publish_record(request: Request, table_name: str, record_id: UuidStr):
     """Torna o registo visível na loja (e cores/produtos do modelo, se aplicável)."""
     cfg = TABLE_MAP.get(table_name)
     if not cfg:
@@ -398,14 +474,7 @@ def publish_record(request: Request, table_name: str, record_id: str):
             _assert_model_publishable(table_name, record_id)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-    res = _scoped(_db_table(table_name).update({"visibilidade": True}), table_name).eq("id", record_id).execute()
-    if not res.data:
-        raise HTTPException(status_code=404, detail="Registo não encontrado")
-
-    if table_name in all_model_tables():
-        _publish_catalog_children(table_name, record_id)
-    elif table_name == "categories":
-        _cascade_category_visibility(record_id, True)
+    res = _set_visibility(table_name, record_id, True)
 
     _invalidate_catalog_cache(table_name=table_name, record=res.data[0], record_id=record_id)
     _audit(request, "publish", table_name, resource_id=record_id)
@@ -413,7 +482,7 @@ def publish_record(request: Request, table_name: str, record_id: str):
 
 
 @router.patch("/{table_name}/{record_id}/lida")
-def patch_lida(request: Request, table_name: str, record_id: str, body: dict):
+def patch_lida(request: Request, table_name: str, record_id: UuidStr, body: dict):
     """Marca orçamento/mensagem como lida ou não lida."""
     _schema_for(table_name)
     assert_table_action(table_name, "update", _role(request))
@@ -429,8 +498,57 @@ def patch_lida(request: Request, table_name: str, record_id: str, body: dict):
     return (res.data or [{"id": record_id, "lida": lida}])[0]
 
 
+# Ciclo do orçamento (RP-06). Os valores são os da restrição da BD (db/migrations/2026-11-03_quote_lifecycle.sql).
+QUOTE_STATUSES = ("Nova", "Em tratamento", "Proposta enviada", "Vendido", "Cancelado", "Arquivado")
+
+
+@router.patch("/pedidos_orcamento/{record_id}/gestao")
+def patch_quote_management(request: Request, record_id: UuidStr, body: dict):
+    """Estado, valor da proposta e nota interna de um orçamento. `vendido_em` é sempre decidido aqui, nunca pelo corpo:
+    preenche-se ao passar a «Vendido» (a retenção poupa os pedidos vendidos, LEGAL-09) e limpa-se ao sair."""
+    assert_table_action("pedidos_orcamento", "update", _role(request))
+    payload: dict = {}
+    if "status" in body:
+        status = body["status"]
+        if status not in QUOTE_STATUSES:
+            raise HTTPException(status_code=400, detail="Estado inválido.")
+        payload["status"] = status
+    if "valor_proposta" in body:
+        raw = body["valor_proposta"]
+        if raw in (None, ""):
+            payload["valor_proposta"] = None
+        else:
+            try:
+                value = round(float(str(raw).replace(",", ".")), 2)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Valor da proposta inválido.") from None
+            if not 0 <= value <= 10_000_000:
+                raise HTTPException(status_code=400, detail="Valor da proposta inválido.")
+            payload["valor_proposta"] = value
+    if "nota_interna" in body:
+        note = str(body["nota_interna"] or "").strip()
+        if len(note) > 2000:
+            raise HTTPException(status_code=400, detail="Nota interna demasiado longa (máx. 2000 caracteres).")
+        payload["nota_interna"] = note or None
+    if not payload:
+        raise HTTPException(status_code=400, detail="Nada para gravar.")
+    if "status" in payload:
+        current = _db_table("pedidos_orcamento").select("vendido_em").eq("id", record_id).execute().data
+        if not current:
+            raise HTTPException(status_code=404, detail="Registo não encontrado")
+        if payload["status"] == "Vendido":
+            payload["vendido_em"] = current[0].get("vendido_em") or datetime.now(timezone.utc).isoformat()
+        else:
+            payload["vendido_em"] = None
+    res = _db_table("pedidos_orcamento").update(payload).eq("id", record_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Registo não encontrado")
+    _audit(request, "quote_management", "pedidos_orcamento", resource_id=record_id, fields=sorted(payload))
+    return res.data[0]
+
+
 @router.delete("/{table_name}/{record_id}")
-def delete_record(request: Request, table_name: str, record_id: str, hard: bool = False):
+def delete_record(request: Request, table_name: str, record_id: UuidStr, hard: bool = False):
     _schema_for(table_name)
     if hard and table_name in SENSITIVE_BUSINESS_TABLES:
         hard = False
@@ -438,9 +556,7 @@ def delete_record(request: Request, table_name: str, record_id: str, hard: bool 
     assert_table_action(table_name, action, _role(request))
     try:
         if hard:
-            if table_name in all_model_tables():
-                get_db().table("product_model_colors").delete().eq("id_modelo", record_id).execute()
-                get_db().table("product_variants").delete().eq("id_modelo", record_id).execute()
+            # Um só DELETE: cores e variantes saem em cascata (FK ON DELETE CASCADE), atomicamente (API-08).
             _scoped(_db_table(table_name).delete(), table_name).eq("id", record_id).execute()
             _invalidate_catalog_cache(table_name=table_name, record_id=record_id)
             _audit(request, "hard_delete", table_name, resource_id=record_id)
@@ -452,8 +568,18 @@ def delete_record(request: Request, table_name: str, record_id: str, hard: bool 
     except HTTPException:
         raise
     except Exception as exc:
+        if table_name == "categories" and _is_foreign_key_violation(exc):
+            # A BD recusa (ON DELETE RESTRICT, BD-12): apagar a categoria não pode levar o catálogo atrás.
+            raise HTTPException(
+                status_code=409, detail="A categoria ainda tem modelos. Esvazie-a ou mova-os antes de a apagar."
+            ) from exc
         logger.error("Delete %s/%s: %s", table_name, record_id, exc)
         raise HTTPException(status_code=400, detail=_client_error(exc)) from exc
+
+
+def _is_foreign_key_violation(exc: Exception) -> bool:
+    text = f"{getattr(exc, 'code', '')} {exc}".lower()
+    return "23503" in text or "foreign key" in text or "violates foreign" in text
 
 
 def _idempotency_op(table_name: str, payload: dict) -> str:
@@ -474,6 +600,10 @@ def _idempotency_op(table_name: str, payload: dict) -> str:
 
 def _enrich_create_payload(table_name: str, body: dict) -> dict:
     """Enrich payload before create (e.g., set defaults, computed fields)."""
+    # A família de um produto (EAN) é a da tabela. O campo está escondido no formulário, por isso não vem no corpo:
+    # sem isto, criar um produto avisava «tipo_catalogo field required» (o bundle já faz o mesmo).
+    if table_name in all_product_tables():
+        body = {**body, "tipo_catalogo": tipo_for_table(table_name)}
     return body
 
 

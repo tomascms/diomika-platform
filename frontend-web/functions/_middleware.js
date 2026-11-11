@@ -1,4 +1,9 @@
+import { catalogueFallback } from "./_lib/catalogue-fallback.js";
+
 /**
+ * Corre em todos os pedidos da loja: domínio canónico, bloqueio de caminhos sensíveis, as páginas do catálogo que o
+ * build não gerou (RP-04) e os cabeçalhos de segurança.
+ *
  * Block sensitive path probes on Cloudflare Pages (SPA otherwise returns index.html).
  */
 const BLOCK = [
@@ -11,6 +16,15 @@ const BLOCK = [
   /^\/\.github(?:$|\/)/i,
   /^\/node_modules(?:$|\/)/i,
 ];
+
+// Endereços antigos que a loja ainda recebe (o alias /contact do router, o /produtos/<categoria> de antes de
+// /categoria/<categoria>). Redireccionam-se aqui, e não em `_redirects`: o Pages não aplica o `_redirects` aos pedidos
+// que passam pelas Functions, e este middleware corre em todos os pedidos da loja (FE-04).
+function legacyRedirect(path) {
+  if (/^\/contact\/?$/.test(path)) return "/contacto";
+  const category = /^\/produtos\/([^/]+)\/?$/.exec(path);
+  return category ? `/categoria/${category[1]}` : null;
+}
 
 // Domínio canónico: diomika.com (sem www) → https://www.diomika.com, mesmo caminho.
 const CANONICAL_HOST = "www.diomika.com";
@@ -41,6 +55,11 @@ export async function onRequest(context) {
     return Response.redirect(url.toString(), 301);
   }
   const path = url.pathname;
+  const moved = legacyRedirect(path);
+  if (moved) {
+    url.pathname = moved;
+    return Response.redirect(url.toString(), 301);
+  }
   if (BLOCK.some((re) => re.test(path))) {
     return new Response("Not Found", {
       status: 404,
@@ -51,7 +70,9 @@ export async function onRequest(context) {
       },
     });
   }
-  const response = await context.next();
+  let response = await context.next();
+  // O Pages não achou o ficheiro (404): se for uma página do catálogo que existe mas o build não gerou, serve-se a loja.
+  if (response.status === 404) response = (await catalogueFallback(context, url)) ?? response;
   const headers = new Headers(response.headers);
   Object.entries(securityHeaders()).forEach(([key, value]) => {
     headers.set(key, value);

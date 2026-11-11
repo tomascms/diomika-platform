@@ -1,5 +1,5 @@
 # Atalhos locais. Nenhum alvo toca em produção.
-.PHONY: install test lint build-loja build-backoffice
+.PHONY: install test lint build-loja build-backoffice ci hooks
 
 install:
 	pip install -r requirements-dev.txt
@@ -19,3 +19,11 @@ build-loja:
 
 build-backoffice:
 	cd backoffice-desktop && npx vite build
+
+# O portão: os mesmos passos do CI (scripts/ci_local.py, também corre sem `make`). Inclui os e2e da loja.
+ci:
+	python scripts/ci_local.py
+
+# Uma vez por clone: liga o hook pre-push (.githooks/pre-push corre o portão sem os e2e).
+hooks:
+	git config core.hooksPath .githooks

@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from core.database import get_db
 from core.notify import contact_notify_email
+from core.origem import clean_origem
 from core.outbox import enqueue_event
 from core.resilience import log_dlq_event
 from core.saga.logging import saga_log_async
@@ -33,6 +34,9 @@ async def run_contact_submission_saga(msg_data: dict[str, Any]) -> ContactSagaRe
     await saga_log_async(saga_id, "contact_submission", "persist_message", "running", {"message_id": message_id})
 
     payload = dict(msg_data)
+    if origem := clean_origem(payload.pop("origem", None)):  # sem origem, a coluna nem é enviada
+        payload["origem"] = origem
+    payload["assunto"] = msg_data.get("assunto") or "Sem assunto"  # opcional no formulário (FE-14); a coluna e a lista do backoffice esperam texto
     payload["id"] = message_id
     payload["status"] = "Nova"
     payload["lida"] = False
@@ -53,12 +57,12 @@ async def run_contact_submission_saga(msg_data: dict[str, Any]) -> ContactSagaRe
         return ContactSagaResult(message_id=message_id, saga_id=saga_id, email_sent=False, status="Nova")
 
     ref_id = f"[Ref: #{message_id[:8]}]"
-    subject = f"[Diomika] Contacto — {msg_data.get('assunto', 'Sem assunto')} {ref_id}"
+    subject = f"[Diomika] Contacto — {payload['assunto']} {ref_id}"
     email_body = (
         f"Nova mensagem de contacto\n\n"
         f"De: {msg_data.get('nome')} ({msg_data.get('email')})\n"
-        f"Contacto: {msg_data.get('contacto')}\n\n"
-        f"Assunto: {msg_data.get('assunto')}\n\n"
+        f"Contacto: {msg_data.get('contacto') or '-'}\n\n"
+        f"Assunto: {payload['assunto']}\n\n"
         f"Mensagem:\n{msg_data.get('mensagem')}\n"
     )
 

@@ -1,26 +1,29 @@
 <script setup>
 import { ref, onErrorCaptured } from 'vue'
+import ErrorState from '@/components/ErrorState.vue'
 
-const error = ref(null)
+const failed = ref(false)
 
+// A mensagem técnica do erro («Cannot read properties of undefined…») fica na consola, não no ecrã (FE-09).
 onErrorCaptured((err) => {
-  error.value = err?.message || 'Ocorreu um erro inesperado.'
+  console.error('[Diomika]', err)
+  failed.value = true
   return false
 })
 
 const retry = () => {
-  error.value = null
+  failed.value = false
   window.location.reload()
 }
 </script>
 
 <template>
-  <div v-if="error" class="error-boundary" role="alert">
-    <div class="error-card surface-card">
-      <h2>Algo correu mal</h2>
-      <p>{{ error }}</p>
-      <button type="button" class="btn btn-primary" @click="retry">Recarregar página</button>
-    </div>
+  <div v-if="failed" class="error-boundary">
+    <ErrorState
+      title="Algo correu mal"
+      text="Ocorreu um erro inesperado nesta página. Tente de novo; se continuar, fale connosco por WhatsApp ou telefone."
+      @retry="retry"
+    />
   </div>
   <slot v-else />
 </template>
@@ -31,17 +34,5 @@ const retry = () => {
   display: grid;
   place-items: center;
   padding: 2rem;
-}
-.error-card {
-  max-width: 420px;
-  padding: 2rem;
-  text-align: center;
-}
-.error-card h2 {
-  margin: 0 0 0.75rem;
-}
-.error-card p {
-  color: var(--color-muted);
-  margin: 0 0 1.25rem;
 }
 </style>

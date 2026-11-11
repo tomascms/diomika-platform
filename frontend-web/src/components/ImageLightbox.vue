@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onUnmounted, watch } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const props = defineProps({
   src: { type: String, default: '' },
@@ -8,19 +8,43 @@ const props = defineProps({
 })
 const emit = defineEmits(['close'])
 
+const closeBtn = ref(null)
+let trigger = null // o que a abriu: o foco volta para lá ao fechar
+// A página por trás fica `inert`: sem foco, sem clique, e fora da árvore de acessibilidade (A11Y-02). A lightbox está
+// teletransportada para o <body>, fora de #app, por isso não é afectada.
+const setBackgroundInert = (on) => document.getElementById('app')?.toggleAttribute('inert', on)
+
 const onKey = (e) => {
+  if (!props.open) return
   if (e.key === 'Escape') emit('close')
+  // O único elemento focável é «Fechar»: Tab fica nele em vez de sair para a barra do browser.
+  if (e.key === 'Tab') {
+    e.preventDefault()
+    closeBtn.value?.focus()
+  }
 }
 
 watch(
   () => props.open,
-  (v) => {
+  async (v) => {
     document.body.style.overflow = v ? 'hidden' : ''
+    if (v) {
+      trigger = document.activeElement
+      setBackgroundInert(true)
+      await nextTick()
+      closeBtn.value?.focus()
+    } else {
+      setBackgroundInert(false)
+      const back = trigger
+      trigger = null
+      if (back?.isConnected) back.focus()
+    }
   },
 )
 
 onMounted(() => window.addEventListener('keydown', onKey))
 onUnmounted(() => {
+  setBackgroundInert(false)
   window.removeEventListener('keydown', onKey)
   document.body.style.overflow = ''
 })
@@ -36,7 +60,15 @@ onUnmounted(() => {
       :aria-label="alt || 'Ampliar imagem'"
       @click.self="emit('close')"
     >
-      <button type="button" class="lightbox-close" aria-label="Fechar" @click="emit('close')">×</button>
+      <button
+        ref="closeBtn"
+        type="button"
+        class="lightbox-close"
+        aria-label="Fechar"
+        @click="emit('close')"
+      >
+        ×
+      </button>
       <img :src="src" :alt="alt" class="lightbox-img" />
     </div>
   </Teleport>

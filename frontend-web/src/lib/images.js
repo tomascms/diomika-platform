@@ -1,4 +1,5 @@
 import { getImageUrl, storageObjectPath } from '@/lib/supabaseConfig'
+import { sessionStore } from '@/lib/storage'
 
 export const PLACEHOLDER = '/placeholder.svg'
 
@@ -65,26 +66,20 @@ function cacheKey(path, transform) {
   return `${base}::w${transform.width || ''}q${transform.quality || ''}`
 }
 
+// `sessionStore` nunca lança: com os dados do site bloqueados, aceder a `sessionStorage` lançava ao carregar
+// este módulo e a loja ficava em branco (FE-11).
 function purgeLegacyCaches() {
-  if (typeof sessionStorage === 'undefined') return
-  try {
-    ;[
-      'diomika_signed_v1',
-      'diomika_signed_v2',
-      'diomika_signed_v3',
-      'diomika_signed_v4',
-    ].forEach((k) => sessionStorage.removeItem(k))
-  } catch {
-    /* ignore */
-  }
+  ;['diomika_signed_v1', 'diomika_signed_v2', 'diomika_signed_v3', 'diomika_signed_v4'].forEach(
+    (k) => sessionStore.remove(k),
+  )
 }
 
 purgeLegacyCaches()
 
 function readPersist(key) {
-  if (!key || typeof sessionStorage === 'undefined') return null
+  if (!key) return null
   try {
-    const raw = sessionStorage.getItem(PERSIST_KEY)
+    const raw = sessionStore.get(PERSIST_KEY)
     if (!raw) return null
     const bag = JSON.parse(raw)
     const row = bag?.[key]
@@ -101,11 +96,11 @@ function readPersist(key) {
 }
 
 function writePersist(key, url) {
-  if (!key || !url || typeof sessionStorage === 'undefined') return
+  if (!key || !url) return
   if (!isReadyUrl(url) || isPlaceholderUrl(url)) return
   if (!/\/object\/sign\//i.test(url) && !/\/render\/image\/sign\//i.test(url)) return
   try {
-    const raw = sessionStorage.getItem(PERSIST_KEY)
+    const raw = sessionStore.get(PERSIST_KEY)
     const bag = raw ? JSON.parse(raw) : {}
     bag[key] = { url, exp: Date.now() + PERSIST_TTL_MS }
     const keys = Object.keys(bag)
@@ -115,9 +110,9 @@ function writePersist(key, url) {
         .slice(0, keys.length - 300)
         .forEach((k) => delete bag[k])
     }
-    sessionStorage.setItem(PERSIST_KEY, JSON.stringify(bag))
+    sessionStore.set(PERSIST_KEY, JSON.stringify(bag))
   } catch {
-    /* quota / private mode */
+    /* JSON ilegível */
   }
 }
 
@@ -138,8 +133,7 @@ export async function resolveImageUrls(paths, placeholder = PLACEHOLDER, options
   const input = Array.isArray(paths) ? paths : []
   if (!input.length) return []
 
-  const transform =
-    options.transform && transformEnabled() ? options.transform : null
+  const transform = options.transform && transformEnabled() ? options.transform : null
 
   if (!storagePrivateEnabled()) {
     return input.map((path) => {

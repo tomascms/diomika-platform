@@ -1,6 +1,7 @@
 import imaplib
 import email
 from email.header import decode_header
+from email.utils import parseaddr
 import time
 import os
 import re
@@ -15,7 +16,8 @@ sys.path.insert(0, str(_BACKEND))
 
 from core.env_loader import load_project_env
 from core.database import get_db
-from paths import BACKEND_ROOT
+from core import state_store
+from paths import BACKEND_ROOT, heartbeat_path
 from utils.email_body import strip_email_quotes
 
 logging.basicConfig(level=logging.INFO)
@@ -38,6 +40,8 @@ supabase = get_db()
 
 
 def _load_state() -> set[str]:
+    if state_store._supabase():
+        return set(state_store.load("email_worker_state", {}).get("processed_keys", []))
     if not STATE_FILE.exists():
         return set()
     try:
@@ -49,6 +53,9 @@ def _load_state() -> set[str]:
 
 def _save_state(keys: set[str]) -> None:
     trimmed = sorted(keys)[-5000:]
+    if state_store._supabase():
+        state_store.save("email_worker_state", {"processed_keys": trimmed})
+        return
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     STATE_FILE.write_text(
         json.dumps({"processed_keys": trimmed}, indent=2),
@@ -178,6 +185,20 @@ def _is_duplicate(message_id: str, sender_email: str, body: str) -> bool:
     return False
 
 
+def _is_vendor(sender_email: str) -> bool:
+    mine = parseaddr(MAIL_FROM)[1].lower()
+    return bool(mine) and parseaddr(sender_email)[1].lower() == mine
+
+
+def _sender_allowed(message_id: str, sender_email: str) -> bool:
+    """Só o email do próprio contacto ou o nosso remetente entram na conversa."""
+    if _is_vendor(sender_email):
+        return True
+    res = supabase.table("contact_messages").select("email").eq("id", message_id).limit(1).execute()
+    contact = ((res.data or [{}])[0].get("email") or "").strip().lower()
+    return bool(contact) and parseaddr(sender_email)[1].lower() == contact
+
+
 def _record_message(
     message_id: str,
     sender_email: str,
@@ -186,6 +207,11 @@ def _record_message(
     processed: set[str],
 ) -> bool:
     if not body or _is_duplicate(message_id, sender_email, body):
+        processed.add(state_key)
+        return False
+    if not _sender_allowed(message_id, sender_email):
+        # Um [Ref: #xxxxxxxx] adivinhado não dá a um estranho voz na conversa (SEG-20).
+        logger.warning("Resposta ignorada: remetente alheio à conversa %s", message_id[:8])
         processed.add(state_key)
         return False
 
@@ -197,7 +223,7 @@ def _record_message(
         }
     ).execute()
 
-    last_sender = "vendor" if MAIL_FROM and MAIL_FROM in sender_email else "client"
+    last_sender = "vendor" if _is_vendor(sender_email) else "client"
     supabase.table("contact_messages").update(
         {
             "last_sender": last_sender,
@@ -216,10 +242,11 @@ def _record_message(
     return True
 
 
-def _search_ref_messages(mail) -> list[bytes]:
-    status, messages = mail.search(None, 'TEXT', '"Ref: #"')
-    if status == "OK" and messages[0]:
-        return messages[0].split()
+def _search_ref_uids(mail) -> list[str]:
+    """UIDs (estáveis entre sessões) das mensagens com «Ref: #» — a pesquisa corre no servidor."""
+    status, data = mail.uid("SEARCH", None, "TEXT", '"Ref: #"')
+    if status == "OK" and data and data[0]:
+        return [u.decode() if isinstance(u, bytes) else str(u) for u in data[0].split()]
     return []
 
 
@@ -229,21 +256,21 @@ def _process_folder(mail, folder: str, processed: set[str]) -> int:
         logger.warning("Nao foi possivel abrir pasta %s", folder)
         return 0
 
-    nums = _search_ref_messages(mail)
-    if not nums:
+    uids = _search_ref_uids(mail)
+    if not uids:
         return 0
 
     recorded = 0
-    for num in nums[-50:]:
-        status, data = mail.fetch(num, "(UID RFC822)")
-        if status != "OK":
+    for uid in uids[-50:]:
+        state_key = f"{folder}:{uid}"
+        # Antes do download: o ciclo de 30 s descarregava as últimas 50 mensagens de cada pasta
+        # (~2 GB/dia, perto do limite IMAP do Gmail e com tráfego de saída pago na VM).
+        if state_key in processed:
             continue
 
-        uid_match = re.search(r"UID (\d+)", data[0][0].decode(errors="replace"))
-        uid = uid_match.group(1) if uid_match else str(num)
-        state_key = f"{folder}:{uid}"
-
-        if state_key in processed:
+        # BODY.PEEK[]: RFC822 marca \Seen ao descarregar e apagava o «não lido» das notificações do dono (API-06).
+        status, data = mail.uid("FETCH", uid, "(BODY.PEEK[])")
+        if status != "OK" or not data or not isinstance(data[0], tuple):
             continue
 
         msg = email.message_from_bytes(data[0][1])
@@ -251,6 +278,7 @@ def _process_folder(mail, folder: str, processed: set[str]) -> int:
         body = _extract_body(msg)
         ref_prefix = _find_ref(subject, body)
         if not ref_prefix:
+            processed.add(state_key)  # sem referência válida: não voltar a descarregar
             continue
 
         message_id = _resolve_message_id(ref_prefix)
@@ -271,7 +299,7 @@ def _process_folder(mail, folder: str, processed: set[str]) -> int:
 
         if _record_message(message_id, sender_email, reply_body, state_key, processed):
             recorded += 1
-            mail.store(num, "+FLAGS", "\\Seen")
+            mail.uid("STORE", uid, "+FLAGS", r"\Seen")
 
     return recorded
 
@@ -284,7 +312,9 @@ def process_inbox():
     processed = _load_state()
     mail = None
     try:
-        mail = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
+        # Sem timeout, uma leitura num socket meio-morto bloqueava a thread para sempre (API-01);
+        # com ele a excepção cai no except abaixo e o ciclo seguinte volta a ligar.
+        mail = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT, timeout=30)
         mail.login(MAIL_USERNAME, MAIL_PASSWORD)
 
         total = 0
@@ -298,7 +328,8 @@ def process_inbox():
 
         _save_state(processed)
 
-        heartbeat = BACKEND_ROOT / ".email_worker_heartbeat.json"
+        heartbeat = heartbeat_path(BACKEND_ROOT)
+        heartbeat.parent.mkdir(parents=True, exist_ok=True)
         heartbeat.write_text(
             json.dumps({"last_poll": datetime.now(timezone.utc).isoformat(), "recorded": total}),
             encoding="utf-8",

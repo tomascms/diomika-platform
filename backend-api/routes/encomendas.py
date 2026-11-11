@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from core.audit import audit_request
 from core.auth import require_pedidos
 from core.local_only import admin_must_be_local
+from core.path_ids import UuidStr
 from core.order_enrich import enrich_order_lines
 from core.database import get_db
 from core.validators.order_lines import validate_order_lines
@@ -58,7 +59,7 @@ def create_encomenda(request: Request, body: EncomendaInternaCreate):
 
 
 @router.get("/{encomenda_id}/pdf")
-def download_pdf(request: Request, encomenda_id: str):
+def download_pdf(request: Request, encomenda_id: UuidStr):
     try:
         res = supabase.table("encomendas_internas").select("*").eq("id", encomenda_id).single().execute()
     except Exception:

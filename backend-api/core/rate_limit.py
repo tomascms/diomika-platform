@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 import logging
+import ipaddress
 import os
 import time
 from collections import defaultdict
 
 from fastapi import HTTPException, Request
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 
 from core.redis_client import get_redis, redis_available, reset_redis_client
 from core.path_patterns import is_admin_or_system_path, is_public_catalog_path
@@ -52,23 +53,41 @@ def _peer_is_trusted_proxy(request: Request) -> bool:
 
 
 def get_client_ip(request: Request) -> str:
+    """CF-Connecting-IP (a Cloudflare reescreve-o) se o par TCP for proxy de confiança; senão o par TCP.
+
+    Nunca X-Forwarded-For nem X-Real-IP: o cliente escolhe o 1.º valor (a Cloudflare acrescenta o seu no fim).
+    """
     if trust_proxy_headers() and _peer_is_trusted_proxy(request):
-        forwarded_for = request.headers.get("x-forwarded-for") or request.headers.get("X-Forwarded-For")
-        if forwarded_for:
-            first_ip = forwarded_for.split(",")[0].strip()
-            if first_ip:
-                return first_ip
-        real_ip = request.headers.get("x-real-ip") or request.headers.get("X-Real-IP")
-        if real_ip:
-            return real_ip.strip()
+        # ponytail: GET via proxy da loja chegam com o IP de saída dos Workers (1 chave partilhada); upgrade: cabeçalho assinado pelo proxy.
+        cf_ip = (request.headers.get("cf-connecting-ip") or "").strip()
+        if cf_ip:
+            return cf_ip
     client = getattr(request, "client", None)
     return client.host if client else "unknown"
 
 
-def _limits_for_path(method: str, path: str) -> tuple[str, int]:
+_EDGE_UA_PREFIX = "DiomikaEdge/"
+
+
+def _limit_key(client: str) -> str:
+    """Chave do limite: IPv6 conta por /64 (quem tem um prefixo roda os 2^64 endereços; SEG-01 carry-over)."""
+    try:
+        addr = ipaddress.ip_address(client)
+    except ValueError:
+        return client
+    if addr.version == 6 and not addr.ipv4_mapped:
+        return str(ipaddress.ip_network(f"{addr}/64", strict=False))
+    return client
+
+
+def _limits_for_path(method: str, path: str, user_agent: str = "") -> tuple[str, int]:
     if is_admin_or_system_path(path):
         return "admin", int(os.getenv("RATE_LIMIT_ADMIN_PER_MIN", "300"))
     if method == "GET" and is_public_catalog_path(path):
+        # O proxy da loja (Pages Function) tem o seu balde: um fluxo de misses não deixa o catálogo em 429 para os
+        # restantes (SEG-12). ponytail: o UA é forjável, mas só dá a quem o forja outro balde com a sua própria chave.
+        if user_agent.startswith(_EDGE_UA_PREFIX):
+            return "edge", int(os.getenv("RATE_LIMIT_EDGE_PER_MIN", "300"))
         return "catalog", int(os.getenv("RATE_LIMIT_CATALOG_PER_MIN", "600"))
     return "global", int(os.getenv("RATE_LIMIT_GLOBAL_PER_MIN", "120"))
 
@@ -140,16 +159,15 @@ def check_global_rate_limit(request: Request) -> Response | None:
     if (path.startswith("/admin") or path.startswith("/system")) and _is_loopback_ip(client):
         return None
 
-    bucket, max_calls = _limits_for_path(request.method, path)
-    key = f"{bucket}:{client}"
+    bucket, max_calls = _limits_for_path(request.method, path, request.headers.get("user-agent", ""))
+    key = f"{bucket}:{_limit_key(client)}"
     if _record_and_check(key, max_calls, _window_seconds()):
         return None
-    return Response("Demasiados pedidos", status_code=429)
+    return JSONResponse({"detail": "Demasiados pedidos"}, status_code=429)
 
 
 def rate_limit(request: Request, key_prefix: str, max_calls: int = 5, window_seconds: int = 60):
-    client = get_client_ip(request)
-    key = f"{key_prefix}:{client}"
+    key = f"{key_prefix}:{_limit_key(get_client_ip(request))}"
     if not _record_and_check(key, max_calls, window_seconds):
         raise HTTPException(
             status_code=429,

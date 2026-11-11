@@ -1,0 +1,9 @@
+{
+  "id": "6496fab1-a7f0-413d-985f-64306a153ed0",
+  "nome": "Toalhas de Mesa",
+  "slug": "toalhas-mesa",
+  "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/categories/imagem/e6ed9fdeccc24593b5aea7a304f9524d.png",
+  "tipo_catalogo": "toalha_mesa",
+  "carrinho_step": 6,
+  "carrinho_min": 6
+}

@@ -14,7 +14,6 @@ from core.admin_users import (
     has_users,
     mfa_required_globally,
     set_user_disabled,
-    verify_password,
 )
 from core.alerts import send_alert
 from core.audit import log_admin_action
@@ -85,7 +84,7 @@ def login(body: LoginBody, request: Request):
     if err == "mfa_setup_required":
         return {
             "mfa_setup_required": True,
-            "detail": "ADMIN_MFA_REQUIRED=1 — configure MFA via POST /admin/auth/mfa/setup",
+            "detail": "A autenticação em dois passos é obrigatória: configure a app autenticadora para continuar.",
         }
     if err or not user:
         # Resposta genérica ao cliente — sem enumeração (lockout/disabled/tentativas).
@@ -101,7 +100,7 @@ def login(body: LoginBody, request: Request):
         send_alert(
             "Admin login falhou",
             severity="warning",
-            detail={"username": body.username[:64], "ip": ip, "reason": err or "invalid"},
+            detail={"reason": err or "invalid"},  # sem IP nem utilizador: o webhook é de terceiros (LEGAL-16)
         )
         try:
             from core.anomaly import note_login_failure
@@ -130,18 +129,53 @@ def login(body: LoginBody, request: Request):
     }
 
 
+@router.post("/desktop")
+def desktop_login(request: Request):
+    """Entrada sem palavra-passe do backoffice (ADMIN_DESKTOP_AUTOLOGIN=1 + gate). O «token» é só um marcador
+    para a app saber que está dentro: quem autoriza cada pedido é o gate, em require_api_key."""
+    from core.local_only import desktop_autologin_ok
+
+    if not desktop_autologin_ok(request):
+        raise HTTPException(status_code=404, detail="Not Found")
+    log_admin_action(
+        action="login_ok",
+        resource="auth",
+        role="admin",
+        actor="backoffice",
+        client_ip=get_client_ip(request),
+        request_id=getattr(request.state, "request_id", None),
+    )
+    return {"access_token": "desktop", "token_type": "gate", "username": "backoffice", "role": "admin"}
+
+
+def _check_enrolment_password(request: Request, username: str, password: str, bucket: str, max_calls: int) -> str:
+    """Password conferida como no login (bloqueio da conta + limite por utilizador): o enrolamento não é um oráculo."""
+    rate_limit(request, bucket, max_calls=max_calls, window_seconds=300)
+    rate_limit_absolute(f"admin_login_user:{(username or '').strip().lower()[:64] or 'unknown'}", max_calls=10, window_seconds=300)
+    user, err = authenticate(username, password, enrolling=True)
+    if err or not user:
+        log_admin_action(
+            action="login_failed",
+            resource="auth",
+            role="anonymous",
+            actor=username[:64],
+            client_ip=get_client_ip(request),
+            request_id=getattr(request.state, "request_id", None),
+            detail={"reason": "mfa_enrolment"},
+        )
+        raise HTTPException(status_code=401, detail="Credenciais inválidas")
+    return str(user["username"])
+
+
 @router.post("/mfa/setup")
 def mfa_setup(body: LoginBody, request: Request):
-    """Inicia enrolamento TOTP (password correcta; código ainda não activo)."""
+    """Inicia o enrolamento TOTP (password correcta, com bloqueio; código ainda não activo)."""
     ensure_bootstrap()
-    rate_limit(request, "admin_mfa_setup", max_calls=10, window_seconds=300)
-    raw = get_user(body.username)
-    if not raw or not verify_password(body.password, str(raw.get("password_hash") or "")):
-        raise HTTPException(status_code=401, detail="Credenciais inválidas")
-    if raw.get("totp_secret"):
+    username = _check_enrolment_password(request, body.username, body.password, "admin_mfa_setup", 10)
+    if (get_user(username) or {}).get("totp_secret"):
         raise HTTPException(status_code=400, detail="MFA já activo nesta conta")
     try:
-        return begin_mfa_setup(body.username)
+        return begin_mfa_setup(username)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -149,19 +183,17 @@ def mfa_setup(body: LoginBody, request: Request):
 @router.post("/mfa/confirm")
 def mfa_confirm(body: MfaConfirmBody, request: Request):
     ensure_bootstrap()
-    rate_limit(request, "admin_mfa_confirm", max_calls=20, window_seconds=300)
-    raw = get_user(body.username)
-    if not raw or not verify_password(body.password, str(raw.get("password_hash") or "")):
-        raise HTTPException(status_code=401, detail="Credenciais inválidas")
+    username = _check_enrolment_password(request, body.username, body.password, "admin_mfa_confirm", 20)
+    raw = get_user(username) or {}
     try:
-        confirm_mfa_setup(body.username, body.totp_code)
+        confirm_mfa_setup(username, body.totp_code)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     log_admin_action(
         action="mfa_enabled",
         resource="auth",
         role=str(raw.get("role") or "admin"),
-        actor=body.username,
+        actor=username,
         client_ip=get_client_ip(request),
         request_id=getattr(request.state, "request_id", None),
     )
@@ -242,9 +274,5 @@ def change_own_password(
         client_ip=get_client_ip(request),
         request_id=getattr(request.state, "request_id", None),
     )
-    send_alert(
-        "Admin password alterada",
-        severity="warning",
-        detail={"username": actor},
-    )
+    send_alert("Admin password alterada", severity="warning")  # quem: no registo de auditoria (LEGAL-16)
     return {"ok": True, "relogin_required": True}

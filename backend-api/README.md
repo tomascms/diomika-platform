@@ -1,7 +1,8 @@
 # API (FastAPI)
 
 Python 3.12, FastAPI, Supabase (PostgREST + Storage), Redis. Corre em Docker com 1 worker uvicorn
-numa VM e2-micro, atrás de Cloudflare Tunnel.
+no Render (plano free, Frankfurt), atrás do proxy da Cloudflare (`api.diomika.com`). Email: envio pela Gmail API,
+respostas por IMAP.
 
 ## Rotas (`routes/`)
 | Módulo | Público | Função |
@@ -10,11 +11,11 @@ numa VM e2-micro, atrás de Cloudflare Tunnel.
 | `contact.py`, `orcamentos.py` | sim (POST) | Formulário de contacto e pedido de orçamento (Turnstile, idempotência) |
 | `admin_auth.py` | backoffice | Login, MFA, sessões |
 | `admin_crud*.py`, `admin_form.py`, `admin.py` | backoffice | CRUD do catálogo orientado por esquema, upload de imagens, import/export CSV |
-| `encomendas.py`, `privacy.py`, `ops_analytics.py`, `system.py`, `desktop_updates.py` | backoffice/ops | Encomendas internas, apagar dados (RGPD), métricas de negócio, feed de actualizações |
+| `encomendas.py`, `privacy.py`, `ops_analytics.py`, `system.py`, `desktop_updates.py` | backoffice/ops | Encomendas internas, apagar dados (RGPD), métricas de negócio, feed de actualizações (sem uso no Render) |
 
 ## Núcleo (`core/`)
 - **Pedido HTTP:** `middleware.py` (request ID, cabeçalhos de segurança, latência, métricas),
-  `rate_limit.py`/`rate_limiting.py` (Redis), `bot_defense.py`, `path_guard.py`, limite de tamanho do corpo.
+  `rate_limit.py` (Redis), `bot_defense.py`, `path_guard.py`, limite de tamanho do corpo.
 - **Autenticação:** `session_tokens.py` (tokens HMAC, uma sessão por utilizador, expiração absoluta
   e por inactividade, revogação em Redis), `auth.py` (papéis admin/catalog/pedidos/mensagens/ops).
 - **Catálogo:** `catalog_service.py`, `catalog_storefront.py`, `catalog_search.py` + `models/`

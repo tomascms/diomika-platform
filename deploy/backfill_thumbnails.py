@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gera as miniaturas `<ficheiro>.w480.webp` e `.w960.webp` das imagens que ainda não as têm.
+"""Gera as miniaturas `<ficheiro>.w480.webp`, `.w960.webp` e `.w160.webp` das imagens que ainda não as têm.
 
 Usa a configuração do .env da raiz (produção). Por omissão só lista o que faria;
 `--apply` grava. Nunca apaga nem altera os originais.

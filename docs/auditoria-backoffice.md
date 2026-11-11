@@ -1,5 +1,8 @@
 # Auditoria do backoffice — 2026-10-23
 
+> Medido quando a API corria numa VM da Google nos EUA. Desde 2026-11-03 corre no Render free (Frankfurt), com o
+> backup diário no GitHub Actions; os números da API não foram medidos de novo.
+
 Âmbito: app Electron (`backoffice-desktop/`, versão 1.2.1 → 1.3.0) e as rotas de admin da API.
 Medições a partir de Portugal, contra produção (só leituras).
 

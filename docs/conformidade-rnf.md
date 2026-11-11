@@ -3,6 +3,9 @@
 Medido a 2026-10-23, depois do deploy de `f314882` (loja) e `aa8a9b0` (API) (loja em `www.diomika.com`, API em `api.diomika.com`). Legenda:
 ✅ cumpre (medido) · 🟡 parcial · ❌ não cumpre · ⛔ impossível com orçamento 0 € · — não aplicável.
 
+> Medido quando a API corria numa VM da Google nos EUA. Desde 2026-11-03 corre no Render free (Frankfurt), com o
+> backup diário no GitHub Actions; os números da API não foram medidos de novo.
+
 **Contexto que decide muita coisa:** a loja é B2B de pedidos de orçamento. Não há pagamentos,
 cartões, cupões, frete, antifraude, checkout com dinheiro, ERP nem stock. A API corre numa única VM
 e2-micro gratuita (1 GB de RAM, EUA) e a base de dados no Supabase Free (Irlanda).
@@ -50,8 +53,8 @@ e2-micro gratuita (1 GB de RAM, EUA) e a base de dados no Supabase Free (Irlanda
 |---|---|---|
 | Circuit breaker de frete | — | Sem frete. Equivalente: edge serve a última versão do catálogo se a API falhar. |
 | Idempotency-Key | ✅ | Pedido de orçamento e contacto enviam `Idempotency-Key`; em produção o orçamento sem chave é rejeitado (teste `test_orcamento_requires_idempotency_in_production`). |
-| RPO ≤ 5 min | ⛔ | Backup diário (RPO 24 h). Réplica/PITR exigem Supabase pago. Cópia fora da VM recusada pelo dono. |
-| RTO < 30 min | 🟡 | Restauro testado (contagens iguais à produção). Recuo da API: imagem anterior em segundos; da loja: 1 clique. Rebuild completo da VM ~25–40 min. |
+| RPO ≤ 5 min | ⛔ | Backup diário (RPO 24 h); objectivo realista a 0 €: BD 24 h, fotos 7 dias. Réplica/PITR exigem Supabase pago. Artefactos do GitHub Actions, 14 dias (runbook §8b). |
+| RTO < 30 min | 🟡 | Restauro testado (contagens iguais à produção). Recuo da API: imagem anterior em segundos; da loja: 1 clique. Rebuild completo da VM ~25–40 min; RTO realista da API: 2 h, com o catálogo servido pelo edge (cenários no runbook §8b). |
 
 ## 6. Manutenção e CI/CD
 | Requisito | Estado | Evidência |

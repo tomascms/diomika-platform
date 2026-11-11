@@ -1,0 +1,126 @@
+{
+  "tipo": "decorativa",
+  "dimensoes": [
+    "35x55",
+    "45x45",
+    "60x60"
+  ],
+  "composicao": {
+    "Veludo": 100
+  },
+  "id": "5e5f7104-dec3-415c-8996-b16891899c87",
+  "id_categoria": "4bba6298-b2d8-4d80-9303-49118f2bb29c",
+  "tipo_catalogo": "almofada",
+  "nome": "Agate",
+  "slug": "agate",
+  "descricao": "Sem descrição",
+  "attributes": {
+    "tipo": "decorativa",
+    "dimensoes": [
+      "35x55",
+      "45x45",
+      "60x60"
+    ],
+    "composicao": {
+      "Veludo": 100
+    }
+  },
+  "visibilidade": true,
+  "created_at": "2026-06-18T00:27:47.01797+00:00",
+  "updated_at": "2026-10-03T16:06:27.93095+00:00",
+  "categories": {
+    "id": "4bba6298-b2d8-4d80-9303-49118f2bb29c",
+    "nome": "Almofada",
+    "carrinho_step": 12,
+    "carrinho_min": 12,
+    "slug": "almofada",
+    "tipo_catalogo": "almofada"
+  },
+  "product_variants": [
+    {
+      "dimensoes": "35x55",
+      "id": "4211a2a9-92ae-4906-a6ec-ec1543e526b5",
+      "ean": "5606044199011",
+      "id_modelo": "5e5f7104-dec3-415c-8996-b16891899c87",
+      "attributes": {
+        "dimensoes": "35x55"
+      },
+      "created_at": "2026-06-18T00:28:44.373144+00:00",
+      "updated_at": "2026-10-03T16:06:27.93095+00:00",
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/barcodes/5606044199011.png",
+      "visibilidade": true,
+      "tipo_catalogo": "almofada"
+    },
+    {
+      "dimensoes": "45x45",
+      "id": "b9831278-1479-43db-83db-1b564b69ecc5",
+      "ean": "5606044191237",
+      "id_modelo": "5e5f7104-dec3-415c-8996-b16891899c87",
+      "attributes": {
+        "dimensoes": "45x45"
+      },
+      "created_at": "2026-06-18T00:32:43.193137+00:00",
+      "updated_at": "2026-10-03T16:06:27.93095+00:00",
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/barcodes/5606044191237.png",
+      "visibilidade": true,
+      "tipo_catalogo": "almofada"
+    },
+    {
+      "dimensoes": "60x60",
+      "id": "bcce4d26-7008-413f-b9d2-e849d0cca569",
+      "ean": "5606044197895",
+      "id_modelo": "5e5f7104-dec3-415c-8996-b16891899c87",
+      "attributes": {
+        "dimensoes": "60x60"
+      },
+      "created_at": "2026-06-18T00:33:21.867294+00:00",
+      "updated_at": "2026-10-03T16:06:27.93095+00:00",
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/barcodes/5606044197895.png",
+      "visibilidade": true,
+      "tipo_catalogo": "almofada"
+    }
+  ],
+  "modelo_cores": [
+    {
+      "id_modelo": "5e5f7104-dec3-415c-8996-b16891899c87",
+      "numero": 1,
+      "nome": "Sortido",
+      "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_almofada_cores/imagem/74b0c75dd3ba43459a00a5053d818814.png",
+      "visibilidade": true
+    }
+  ],
+  "_tipo_catalogo": "almofada",
+  "_storefront": {
+    "mode": "variantes",
+    "product_table": "product_variants",
+    "picker": {
+      "source": "products",
+      "field": "dimensoes",
+      "label": "Dimensão (comprimento×largura)",
+      "format": "dimensions",
+      "suffix": " cm"
+    },
+    "specs": [
+      {
+        "field": "composicao",
+        "label": "Composição (%) — igual para todas as cores",
+        "widget": "composition",
+        "enum_labels": {}
+      },
+      {
+        "field": "dimensoes",
+        "label": "Dimensões (comprimento×largura)",
+        "widget": "dimension_list",
+        "enum_labels": {}
+      }
+    ],
+    "badge": {
+      "field": "tipo",
+      "labels": {
+        "decorativa": "Decorativa",
+        "dormir": "Dormir"
+      }
+    }
+  },
+  "_storefront_mode": "variantes"
+}

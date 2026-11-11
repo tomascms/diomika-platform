@@ -35,6 +35,15 @@ def desktop_gate_ok(request: Request) -> bool:
     return hmac.compare_digest(got, expected)
 
 
+def desktop_autologin_ok(request: Request) -> bool:
+    """ADMIN_DESKTOP_AUTOLOGIN=1: o gate do instalador basta para entrar como admin, sem palavra-passe.
+
+    Decisão do dono (2026-11-03): quem tiver o instalador entra. ponytail: o gate passa a ser a única chave
+    do admin; se o instalador sair de casa, rodar DIOMIKA_DESKTOP_GATE (nova versão) ou desligar isto.
+    """
+    return (os.getenv("ADMIN_DESKTOP_AUTOLOGIN") or "").strip() == "1" and desktop_gate_ok(request)
+
+
 def privileged_access_ok(request: Request) -> bool:
     """Loopback (ops na VM) ou app desktop com gate válido.
 

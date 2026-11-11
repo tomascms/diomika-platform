@@ -1,3 +1,5 @@
+import { fieldErrors } from '@/lib/errors'
+
 const prodBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
 
 if (!import.meta.env.DEV && !prodBase) {
@@ -7,14 +9,31 @@ if (!import.meta.env.DEV && !prodBase) {
 // POST (formulários) vão directos à API. GET de catálogo vão a /api no próprio
 // domínio da loja: em produção é a função da Cloudflare (functions/api) que os
 // serve da cache do PoP; em dev é o proxy do Vite.
-const base = (import.meta.env.DEV ? '/api' : prodBase)
+const base = import.meta.env.DEV ? '/api' : prodBase
 const getBase = import.meta.env.VITE_EDGE_API === '0' && !import.meta.env.DEV ? prodBase : '/api'
 
 export const API_BASE_URL = base
 
 const DEFAULT_TIMEOUT_MS = 25000
 
-const NETWORK_ERROR_MESSAGE = 'Sem ligação ao servidor. Verifique a internet e tente de novo.'
+// Sem resposta (rede em baixo, servidor parado ou lento): a culpa não é do visitante nem se lhe pede que «verifique a internet».
+const NETWORK_ERROR_MESSAGE = 'O nosso servidor não respondeu. Tente de novo daqui a pouco.'
+const TIMEOUT_MESSAGE = 'O nosso servidor não respondeu a tempo. Tente de novo.'
+
+/**
+ * Erro de um pedido à API. `status`: o código HTTP (0 se não houve resposta); `network`: não houve resposta
+ * (rede ou tempo esgotado: `timeout`); `fields`: num 422, {campo: mensagem em português} (lib/errors.js).
+ */
+export class ApiError extends Error {
+  constructor(message, { status = 0, network = false, timeout = false, fields = {}, cause } = {}) {
+    super(message, cause ? { cause } : undefined)
+    this.name = 'ApiError'
+    this.status = status
+    this.network = network
+    this.timeout = timeout
+    this.fields = fields
+  }
+}
 
 function newRequestId() {
   try {
@@ -62,10 +81,11 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = DEFAULT_TIMEOUT_M
     return await fetch(url, { ...options, signal: controller.signal })
   } catch (err) {
     if (err.name === 'AbortError') {
-      throw new Error('O servidor demorou demasiado a responder. Tente novamente.', { cause: err })
+      throw new ApiError(TIMEOUT_MESSAGE, { network: true, timeout: true, cause: err })
     }
     // fetch() rejeita com TypeError («Failed to fetch») quando não há rede.
-    if (err instanceof TypeError) throw new Error(NETWORK_ERROR_MESSAGE, { cause: err })
+    if (err instanceof TypeError)
+      throw new ApiError(NETWORK_ERROR_MESSAGE, { network: true, cause: err })
     throw err
   } finally {
     clearTimeout(timer)
@@ -86,8 +106,7 @@ export async function apiGet(path, { retries = 2 } = {}) {
       resp = await fetchWithTimeout(`${getBase}${path}`)
     } catch (err) {
       // Um timeout (25 s) não se repete — só falhas rápidas de rede.
-      const timedOut = String(err?.message || '').includes('demorou')
-      if (!timedOut && attempt < retries) {
+      if (!err.timeout && attempt < retries) {
         await sleep(300 * 2 ** attempt)
         continue
       }
@@ -99,9 +118,10 @@ export async function apiGet(path, { retries = 2 } = {}) {
       continue
     }
     const body = await resp.json().catch(() => ({}))
-    const error = new Error(parseApiDetail(body, resp.status, resp.headers.get('X-Request-Id') || ''))
-    error.status = resp.status
-    throw error
+    throw new ApiError(parseApiDetail(body, resp.status, resp.headers.get('X-Request-Id') || ''), {
+      status: resp.status,
+      fields: fieldErrors(body),
+    })
   }
 }
 
@@ -113,20 +133,28 @@ export async function apiPost(path, body, options = {}) {
 
   let resp
   try {
-    resp = await fetchWithTimeout(`${base}${path}`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-    }, timeoutMs)
+    resp = await fetchWithTimeout(
+      `${base}${path}`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      },
+      timeoutMs,
+    )
   } catch (err) {
-    if (err.message?.includes('demasiado')) throw err
-    throw new Error(NETWORK_ERROR_MESSAGE, { cause: err })
+    throw err instanceof ApiError
+      ? err
+      : new ApiError(NETWORK_ERROR_MESSAGE, { network: true, cause: err })
   }
 
   const requestId = resp.headers.get('X-Request-Id') || headers['X-Request-Id']
   if (!resp.ok) {
-    const err = await resp.json().catch(() => ({}))
-    throw new Error(parseApiDetail(err, resp.status, requestId))
+    const errorBody = await resp.json().catch(() => ({}))
+    throw new ApiError(parseApiDetail(errorBody, resp.status, requestId), {
+      status: resp.status,
+      fields: fieldErrors(errorBody),
+    })
   }
   return resp.json()
 }

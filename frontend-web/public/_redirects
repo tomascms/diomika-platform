@@ -1,2 +1,9 @@
-/produtos/:slug    /categoria/:slug   301
-/*                 /index.html   200
+# Sem regras de propósito.
+#
+# - Redirecções de endereços antigos (/contact, /produtos/<categoria>): estão em functions/_middleware.js. O Pages não
+#   aplica o `_redirects` aos pedidos que passam pelas Functions, e o middleware corre em todos os pedidos da loja.
+# - Sem `/* /index.html 200`: em produção não fazia nada (os endereços que não existem dão 404 de verdade) e é o
+#   comportamento que se quer, para os motores de busca não guardarem endereços inventados. Se o Pages um dia a
+#   passar a aplicar, deixavam de dar 404 sem aviso (auditoria, hipóteses não provadas). As páginas do catálogo que o
+#   build não gerou, um modelo publicado depois do último deploy, abrem pelo mesmo middleware, que confirma na API
+#   que existem (RP-04).

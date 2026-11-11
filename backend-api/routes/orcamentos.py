@@ -1,16 +1,20 @@
 """Pedidos de orcamento do site (carrinho) — saga + idempotência."""
 from __future__ import annotations
 
+import asyncio
 import io
 import logging
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic_core import PydanticCustomError
 
 from core.audit import audit_request
 from core.auth import require_pedidos
 from core.local_only import admin_must_be_local
+from core.path_ids import UuidStr
 from core.order_enrich import enrich_order_lines
 from core.database import get_db
 from core.text_safe import normalize_text
@@ -23,6 +27,7 @@ from core.idempotency import (
 )
 from core.rate_limit import MAX_PUBLIC_BODY_LINES, MAX_LINE_QUANTITY, get_client_ip, rate_limit
 from core.saga.orcamento_saga import run_orcamento_submission_saga
+from core.validators.nif import clean_nif
 from core.validators.order_lines import validate_order_lines
 from models.schemas import PedidoOrcamentoLinha
 from utils.pdf_encomenda import build_pedido_pdf
@@ -39,18 +44,46 @@ class OrcamentoRequest(BaseModel):
     nome: str = Field(..., min_length=2, max_length=120)
     email: EmailStr
     contacto: str | None = Field(None, max_length=30)
+    # Facultativos (BR-06, RP-05, LEGAL-10): um pedido sem eles continua válido.
     empresa: str | None = Field(None, max_length=200)
+    nif: str | None = Field(None, max_length=20)
+    localidade: str | None = Field(None, max_length=120)
+    tipo_cliente: Literal["empresa", "particular"] | None = None
     observacoes: str | None = Field(None, max_length=5000)
     linhas: list[PedidoOrcamentoLinha] = Field(..., min_length=1, max_length=MAX_PUBLIC_BODY_LINES)
+    origem: dict | None = None  # RP-10: de onde veio (core/origem.py limpa as chaves)
     website: str | None = None
     cf_turnstile_response: str | None = None
 
-    @field_validator("nome", "contacto", "empresa", "observacoes", mode="before")
+    @field_validator("email")
+    @classmethod
+    def _lower_email(cls, v: str) -> str:
+        return str(v).strip().lower()  # a BD exige minúsculas (BD-11) e o apagamento RGPD compara assim
+
+    @field_validator("nome", "contacto", "empresa", "nif", "localidade", "observacoes", mode="before")
     @classmethod
     def _nfc(cls, v: object) -> object:
         if isinstance(v, str):
             return normalize_text(v)
         return v
+
+    @field_validator("empresa", "nif", "localidade")
+    @classmethod
+    def _blank_is_null(cls, v: str | None) -> str | None:
+        return v or None  # «» e só espaços ficam NULL na coluna, não texto vazio
+
+    @field_validator("nif")
+    @classmethod
+    def _check_nif(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        try:
+            return clean_nif(v)
+        except ValueError:
+            # PydanticCustomError: a mensagem sai tal como está, sem o «Value error, » em inglês.
+            raise PydanticCustomError(
+                "nif_invalido", "NIF inválido: o dígito de controlo não confere. Confira os 9 dígitos."
+            ) from None
 
 
 def _success_payload(pedido_id: str, status: str = "Nova") -> dict:
@@ -72,7 +105,6 @@ async def submit_orcamento(
 
     if not flag("ORCAMENTO_FORM", True):
         raise HTTPException(status_code=503, detail="Formulário temporariamente indisponível.")
-    rate_limit(request, "orcamento_form", max_calls=5, window_seconds=60)
 
     if body.website:
         raise HTTPException(status_code=400, detail="Pedido invalido")
@@ -92,19 +124,22 @@ async def submit_orcamento(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    # Depois do Turnstile: pedidos recusados não gastam o limite do IP (SEG-01).
+    rate_limit(request, "orcamento_form", max_calls=5, window_seconds=60)
+
     if key:
         try:
-            cached = get_cached_response(key, IDEMPOTENCY_OP)
+            cached = await asyncio.to_thread(get_cached_response, key, IDEMPOTENCY_OP)
         except IdempotencyUnavailable:
             raise HTTPException(status_code=503, detail="Serviço temporariamente indisponível.") from None
         if cached:
             return cached
 
-        state = begin_idempotent_request(key, IDEMPOTENCY_OP)
+        state = await asyncio.to_thread(begin_idempotent_request, key, IDEMPOTENCY_OP)
         if state == "unavailable":
             raise HTTPException(status_code=503, detail="Serviço temporariamente indisponível.")
         if state == "cached":
-            cached = get_cached_response(key, IDEMPOTENCY_OP)
+            cached = await asyncio.to_thread(get_cached_response, key, IDEMPOTENCY_OP)
             if cached:
                 return cached
         if state == "in_progress":
@@ -114,7 +149,7 @@ async def submit_orcamento(
             )
 
     try:
-        validate_order_lines(body.linhas)
+        await asyncio.to_thread(validate_order_lines, body.linhas)
         for linha in body.linhas:
             if linha.quantidade > MAX_LINE_QUANTITY:
                 raise HTTPException(
@@ -123,7 +158,7 @@ async def submit_orcamento(
                 )
     except HTTPException:
         if key:
-            abort_idempotent_request(key, IDEMPOTENCY_OP)
+            await asyncio.to_thread(abort_idempotent_request, key, IDEMPOTENCY_OP)
         raise
 
     try:
@@ -133,15 +168,15 @@ async def submit_orcamento(
         )
         payload = _success_payload(result.pedido_id, result.status)
         if key:
-            complete_idempotent_request(key, IDEMPOTENCY_OP, payload)
+            await asyncio.to_thread(complete_idempotent_request, key, IDEMPOTENCY_OP, payload)
         return payload
     except HTTPException:
         if key:
-            abort_idempotent_request(key, IDEMPOTENCY_OP)
+            await asyncio.to_thread(abort_idempotent_request, key, IDEMPOTENCY_OP)
         raise
     except Exception as exc:
         if key:
-            abort_idempotent_request(key, IDEMPOTENCY_OP)
+            await asyncio.to_thread(abort_idempotent_request, key, IDEMPOTENCY_OP)
         logger.error("Erro saga orcamento: %s", exc)
         raise HTTPException(status_code=500, detail="Nao foi possivel registar o pedido.") from exc
 
@@ -150,7 +185,7 @@ async def submit_orcamento(
     "/{pedido_id}/pdf",
     dependencies=[Depends(admin_must_be_local), Depends(require_pedidos)],
 )
-def download_orcamento_pdf(request: Request, pedido_id: str):
+def download_orcamento_pdf(request: Request, pedido_id: UuidStr):
     try:
         res = supabase.table("pedidos_orcamento").select("*").eq("id", pedido_id).single().execute()
     except Exception:
@@ -161,10 +196,15 @@ def download_orcamento_pdf(request: Request, pedido_id: str):
     row = res.data
     linhas = enrich_order_lines(row.get("linhas") or [])
     extra = [f"Email: {row.get('email', '')}"]
-    if row.get("contacto"):
-        extra.append(f"Contacto: {row['contacto']}")
-    if row.get("empresa"):
-        extra.append(f"Empresa: {row['empresa']}")
+    for label, key in (
+        ("Contacto", "contacto"),
+        ("Empresa", "empresa"),
+        ("NIF", "nif"),
+        ("Localidade", "localidade"),
+        ("Compra como", "tipo_cliente"),
+    ):
+        if row.get(key):
+            extra.append(f"{label}: {row[key]}")
     pdf_bytes = build_pedido_pdf("Diomika — Pedido de orcamento", row.get("nome", ""), linhas, extra)
     audit_request(request, action="export_pdf", resource="pedidos_orcamento", resource_id=pedido_id)
 

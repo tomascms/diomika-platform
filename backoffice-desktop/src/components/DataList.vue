@@ -8,8 +8,9 @@ const props = defineProps({
   variant: { type: String, default: 'catalog' },
   activeId: { type: [String, Number], default: null },
   emptyText: { type: String, default: 'Ainda não há registos aqui.' },
+  canQr: { type: Function, default: null },
 })
-defineEmits(['open', 'toggle-visibility', 'toggle-read', 'delete'])
+defineEmits(['open', 'toggle-visibility', 'toggle-read', 'delete', 'qr'])
 
 const primary = (row) => {
   const col = props.columns[0]
@@ -79,6 +80,16 @@ function toggleLabel(row) {
             @click.stop="isConversation() ? $emit('toggle-read', row) : $emit('toggle-visibility', row)"
           >
             <AppIcon :name="isConversation() ? 'mail' : 'eye'" :size="16" />
+          </button>
+          <button
+            v-if="canQr && canQr(row)"
+            type="button"
+            class="btn btn-ghost"
+            title="Gerar etiqueta (.lbx para a Brother)"
+            aria-label="Gerar etiqueta"
+            @click.stop="$emit('qr', row)"
+          >
+            QR
           </button>
           <button
             type="button"

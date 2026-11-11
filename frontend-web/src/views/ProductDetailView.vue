@@ -1,18 +1,28 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, watchEffect } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { resolveImageUrls, PLACEHOLDER } from '@/lib/images'
 import SoftImage from '@/components/SoftImage.vue'
-import { watchDynamicTitle } from '@/composables/usePageMeta'
-import { useCart, resolveCartQtyRules } from '@/composables/useCart'
-import { MIN_ORCAMENTO_MSG } from '@/lib/constants'
+import { setNoindex, watchDynamicTitle } from '@/composables/usePageMeta'
+import { useCart } from '@/composables/useCart'
+import { modelQtyRules } from '@/lib/quantity'
+import { useWhatsAppMessage } from '@/composables/useWhatsAppMessage'
+import { MIN_ORCAMENTO_MSG, SITE_ORIGIN } from '@/lib/constants'
+import { describeModel, modelMeta, pickerNoun, pretty, realDescription } from '@/lib/describe'
+import { productWhatsAppMessage } from '@/lib/whatsappMessage'
+import { cartItemFor } from '@/lib/cartItem'
+import { boxNote } from '@/lib/quantity'
 import { isSingleProductMode } from '@/lib/storefrontFormat'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
+import ErrorState from '@/components/ErrorState.vue'
 import LoadingState from '@/components/LoadingState.vue'
-import QtySelect from '@/components/QtySelect.vue'
+import QtyInput from '@/components/QtyInput.vue'
 import ModelSpecs from '@/components/ModelSpecs.vue'
 import ImageLightbox from '@/components/ImageLightbox.vue'
+import StorageNotice from '@/components/StorageNotice.vue'
 import { useCatalog } from '@/composables/useCatalog'
+import { ApiError } from '@/lib/api'
+import { errorKind } from '@/lib/errors'
 import { categoryProductsRoute, modelDetailRoute } from '@/lib/catalogRoutes'
 
 const route = useRoute()
@@ -28,41 +38,48 @@ const selectedPicker = ref(null)
 const selectedColor = ref(null)
 const category = ref(null)
 const loading = ref(true)
-const error = ref(null)
+const failure = ref(null) // null, 'not-found' (o produto já não existe) ou 'unavailable' (o servidor não respondeu)
 const activeImage = ref('')
 const selectedQty = ref(6)
 const addedMsg = ref('')
 const lightboxOpen = ref(false)
 
 const singleProductMode = computed(() => isSingleProductMode(storefrontCtx.value))
-const qtyStep = computed(() => resolveCartQtyRules(category.value).step)
-const qtyMin = computed(() => resolveCartQtyRules(category.value).min)
+const qtyStep = computed(() => modelQtyRules(model.value, category.value).step)
+const qtyMin = computed(() => modelQtyRules(model.value, category.value).min)
 const badgeText = computed(() => catalog.badgeLabel(model.value, model.value?._tipo_catalogo))
+// «Vendido em caixas de 12 un.» explica o «incrementos de 12» quando o passo é a caixa (RP-08).
 const specExtras = computed(() => [
-  { label: 'Quantidade mínima no pedido', display: `${qtyMin.value} un. (incrementos de ${qtyStep.value})` },
+  {
+    label: 'Quantidade mínima no pedido',
+    display: `${qtyMin.value} un. (incrementos de ${qtyStep.value})`,
+  },
+  ...(boxNote(model.value?.embalagem, qtyStep.value)
+    ? [{ label: 'Venda', display: boxNote(model.value.embalagem, qtyStep.value) }]
+    : []),
 ])
 const selectedProduct = computed(() =>
   catalog.activeProduct(model.value, storefrontCtx.value, selectedPicker.value),
 )
 
-const displayImage = computed(
-  () => activeImage.value || selectedColor.value?.imagem || PLACEHOLDER,
+const displayImage = computed(() => activeImage.value || selectedColor.value?.imagem || PLACEHOLDER)
+
+const categoryName = computed(() => pretty(category.value?.nome))
+
+// A descrição que o cliente escreveu; sem ela, a que se gera das especificações (nunca o «Sem descrição» dos dados antigos).
+const description = computed(
+  () => realDescription(model.value?.descricao) || describeModel(model.value),
 )
 
-const categoryName = computed(() => {
-  const t = String(category.value?.nome || '').trim()
-  return t ? t.charAt(0).toUpperCase() + t.slice(1) : ''
-})
-
+// Título e descrição iguais aos que o pré-render escreve no HTML (lib/describe.js): o Google lê os mesmos depois do JavaScript.
 watchDynamicTitle(
-  () => [model.value?.nome, activeImage.value],
+  () => [model.value?.nome, categoryName.value, activeImage.value],
   () => {
     if (!model.value?.nome) return null
     return {
-      title: model.value.nome,
-      description: (model.value.descricao || 'Detalhe do produto Diomika.').slice(0, 160),
+      ...modelMeta(model.value, categoryName.value),
       image: displayImage.value,
-      path: route.fullPath,
+      path: route.path, // sem a query (SEO-05)
     }
   },
 )
@@ -81,10 +98,27 @@ const breadcrumbItems = computed(() => {
   return items
 })
 
+// O código de barras vem da BD com o URL assinado que tinha quando foi gerado, já expirado (FE-10, SEO-07). Resolve-se
+// uma só vez, em todas as linhas de produto e antes de montar as opções do selector, para a ficha e o selector lerem o
+// mesmo URL em qualquer modo (único, variantes, assento). Antes só o ramo das variantes corrigia as opções, e a ficha lê
+// as opções: nos artigos únicos a imagem aparecia partida.
+async function resolveBarcodes(data, table) {
+  const raw = data[table]
+  const rows = Array.isArray(raw) ? raw : raw ? [raw] : []
+  if (!rows.length) return
+  const urls = await resolveImageUrls(
+    rows.map((row) => row?.barcode_url || ''),
+    '',
+  )
+  const fresh = rows.map((row, i) => ({ ...row, barcode_url: urls[i] || '' }))
+  model.value[table] = Array.isArray(raw) ? fresh : fresh[0]
+}
+
 const fetchProduct = async () => {
   try {
     loading.value = true
-    error.value = null
+    failure.value = null
+    addedMsg.value = ''
     model.value = null
     pickerOptions.value = []
     colors.value = []
@@ -108,10 +142,15 @@ const fetchProduct = async () => {
 
     if (category.value && model.value) {
       const canonical = modelDetailRoute(category.value, model.value)
-      const currentModelKey = String(route.params.modelSlug || route.params.legacyModelId || '').trim()
+      const currentModelKey = String(
+        route.params.modelSlug || route.params.legacyModelId || '',
+      ).trim()
       const canonicalModelKey = String(canonical.params?.modelSlug || '').trim()
-      if (legacyId || (currentModelKey && canonicalModelKey && currentModelKey !== canonicalModelKey)) {
-        await router.replace(canonical)
+      if (
+        legacyId ||
+        (currentModelKey && canonicalModelKey && currentModelKey !== canonicalModelKey)
+      ) {
+        await router.replace({ ...canonical, query: route.query })
         return
       }
     }
@@ -119,49 +158,39 @@ const fetchProduct = async () => {
     const rawColors = (modelData.modelo_cores || [])
       .filter((c) => c.visibilidade !== false)
       .sort((a, b) => a.numero - b.numero)
-    const colorUrls = await resolveImageUrls(rawColors.map((c) => c.imagem), PLACEHOLDER)
+    const colorUrls = await resolveImageUrls(
+      rawColors.map((c) => c.imagem),
+      PLACEHOLDER,
+    )
     colors.value = rawColors.map((c, i) => ({ ...c, imagem: colorUrls[i] || PLACEHOLDER }))
 
     if (colors.value.length === 0) {
-      throw new Error('Não existem cores disponíveis para este modelo.')
+      throw new ApiError('Não existem cores disponíveis para este modelo.', { status: 404 })
     }
 
+    await resolveBarcodes(modelData, storefrontCtx.value.product_table)
     pickerOptions.value = catalog.buildPickerOptions(modelData, storefrontCtx.value)
     if (pickerOptions.value.length === 0) {
       const label = storefrontCtx.value?.picker?.label || 'variante'
-      throw new Error(`Não existem ${label.toLowerCase()} disponíveis para este modelo.`)
+      throw new ApiError(`Não existem ${label.toLowerCase()} disponíveis para este modelo.`, {
+        status: 404,
+      })
     }
 
-    if (singleProductMode.value) {
-      const product = selectedProduct.value
-      if (!product) {
-        throw new Error('Este modelo ainda não tem EAN registado.')
-      }
-      const pt = storefrontCtx.value.product_table
-      const [barcodeUrl] = product.barcode_url
-        ? await resolveImageUrls([product.barcode_url], '')
-        : ['']
-      model.value[pt] = {
-        ...product,
-        barcode_url: barcodeUrl,
-      }
-    } else {
-      const barcodePaths = pickerOptions.value.map((opt) => opt.value?.barcode_url || '')
-      const barcodeUrls = await resolveImageUrls(barcodePaths, '')
-      pickerOptions.value = pickerOptions.value.map((opt, i) => ({
-        ...opt,
-        value: {
-          ...opt.value,
-          barcode_url: barcodeUrls[i] || '',
-        },
-      }))
+    if (singleProductMode.value && !selectedProduct.value) {
+      throw new ApiError('Este modelo ainda não tem EAN registado.', { status: 404 })
     }
 
     selectColor(colors.value[0])
-    selectPicker(pickerOptions.value[0])
+    // ?ean= (QR da etiqueta): abre já na dimensão/variante desse produto; sem ele, ou se não existir, a primeira.
+    const wantedEan = String(route.query.ean || '').trim()
+    selectPicker(
+      (wantedEan && pickerOptions.value.find((o) => (o.product?.ean || o.value?.ean) === wantedEan)) ||
+        pickerOptions.value[0],
+    )
     selectedQty.value = qtyMin.value
   } catch (err) {
-    error.value = 'Não foi possível carregar os detalhes do produto.'
+    failure.value = errorKind(err)
     console.error(err)
   } finally {
     loading.value = false
@@ -183,31 +212,60 @@ const addToCart = () => {
   const product = selectedProduct.value
   if (!product?.ean) return
 
-  const picker = storefrontCtx.value?.picker
-  const dimLabel = singleProductMode.value
-    ? selectedPicker.value.label
-    : product[picker?.field || 'dimensoes']
+  // A mesma linha que o pedido rápido junta (lib/cartItem.js).
+  cart.addItem(
+    cartItemFor({
+      model: model.value,
+      category: category.value,
+      product,
+      color: selectedColor.value,
+      quantity: selectedQty.value,
+      image: selectedColor.value.imagem,
+    }),
+  )
 
-  cart.addItem({
-    ean: product.ean,
-    numero_cor: selectedColor.value.numero,
-    altura: product.altura || (singleProductMode.value ? selectedPicker.value.value : undefined),
-    quantidade: selectedQty.value,
-    modeloNome: model.value.nome,
-    dimensoes: dimLabel,
-    corNome: selectedColor.value.nome,
-    carrinhoStep: qtyStep.value,
-    carrinhoMin: qtyMin.value,
-    imagem: selectedColor.value.imagem,
-  })
-
+  // Fica até se sair da página (FE-07): antes sumia aos 2,8 s, e quem não olhava não sabia se tinha juntado.
   addedMsg.value = `${selectedQty.value} un. adicionadas ao pedido.`
-  setTimeout(() => {
-    addedMsg.value = ''
-  }, 2800)
 }
 
 const goToCart = () => router.push({ name: 'cart' })
+
+// Saída de um produto que já não existe: a categoria do endereço, ou o catálogo se o endereço não a tem.
+const backTo = computed(() =>
+  route.params.categorySlug
+    ? {
+        to: { name: 'products', params: { categorySlug: route.params.categorySlug } },
+        label: 'Ver outros modelos',
+      }
+    : { to: { name: 'categories' }, label: 'Ver o catálogo' },
+)
+
+// Um produto que já não existe não se indexa (RP-04).
+watch(failure, (kind) => setNoindex(kind === 'not-found'))
+
+// O botão do WhatsApp leva o modelo, a cor e a medida escolhidos, o EAN e o endereço (RP-13); ao sair da página volta ao texto geral.
+const whatsapp = useWhatsAppMessage()
+watchEffect(() => {
+  const product = selectedProduct.value
+  if (!model.value || !product?.ean) return whatsapp.clear()
+  const picker = storefrontCtx.value?.picker
+  whatsapp.set(
+    productWhatsAppMessage({
+      name: model.value.nome,
+      category: categoryName.value,
+      // Com uma só cor o nome é «Sortido»: não diz nada.
+      colour:
+        colors.value.length > 1
+          ? selectedColor.value?.nome || `${selectedColor.value?.numero}`
+          : '',
+      measureNoun: picker ? pickerNoun(picker)[0] : '',
+      measure: picker ? selectedPicker.value?.label : '',
+      ean: product.ean,
+      url: `${SITE_ORIGIN}${route.path}`,
+    }),
+  )
+})
+onUnmounted(whatsapp.clear)
 
 onMounted(fetchProduct)
 watch(() => route.fullPath, fetchProduct)
@@ -218,17 +276,31 @@ watch(() => route.fullPath, fetchProduct)
     <Breadcrumbs :items="breadcrumbItems" />
 
     <LoadingState v-if="loading" message="A carregar detalhes…" />
-    <p v-else-if="error" class="alert alert-error page-shell">{{ error }}</p>
+    <div v-else-if="failure" class="page-shell">
+      <ErrorState
+        :kind="failure"
+        :title="failure === 'not-found' ? 'Este produto já não está disponível' : ''"
+        :text="
+          failure === 'not-found'
+            ? 'Pode ter sido retirado do catálogo. Veja os outros modelos.'
+            : ''
+        "
+        :back="failure === 'not-found' ? backTo : null"
+        @retry="fetchProduct"
+      />
+    </div>
 
-    <article
-      v-else-if="model && selectedColor && selectedPicker"
-      class="detail-layout page-shell"
-    >
+    <article v-else-if="model && selectedColor && selectedPicker" class="detail-layout page-shell">
       <section class="gallery">
-        <button type="button" class="main-image-wrap" aria-label="Ampliar imagem" @click="lightboxOpen = true">
+        <button
+          type="button"
+          class="main-image-wrap"
+          aria-label="Ampliar imagem"
+          @click="lightboxOpen = true"
+        >
           <SoftImage
             :src="displayImage"
-            :alt="`${model.nome} — cor seleccionada`"
+            :alt="`${model.nome} — cor selecionada`"
             img-class="main-img"
             eager
             fetchpriority="high"
@@ -245,14 +317,16 @@ watch(() => route.fullPath, fetchProduct)
           <div class="color-thumbs">
             <button
               v-for="c in colors"
-              :key="c.id"
+              :key="c.numero"
               type="button"
               class="color-thumb-btn"
-              :class="{ active: selectedColor.id === c.id }"
+              :class="{ active: selectedColor.numero === c.numero }"
+              :aria-pressed="selectedColor.numero === c.numero"
+              :aria-label="c.nome ? `Cor ${c.numero} — ${c.nome}` : `Cor ${c.numero}`"
               :title="c.nome || `Cor ${c.numero}`"
               @click="selectColor(c)"
             >
-              <SoftImage :src="c.imagem || PLACEHOLDER" :alt="c.nome || `Cor ${c.numero}`" thumb />
+              <SoftImage :src="c.imagem || PLACEHOLDER" alt="" :thumb-width="160" thumb />
             </button>
           </div>
         </div>
@@ -260,19 +334,18 @@ watch(() => route.fullPath, fetchProduct)
 
       <section class="buy-column">
         <header class="product-header">
-          <RouterLink
-            v-if="category"
-            class="cat-link"
-            :to="categoryProductsRoute(category)"
-          >
+          <RouterLink v-if="category" class="cat-link" :to="categoryProductsRoute(category)">
             {{ categoryName }}
           </RouterLink>
           <span v-if="badgeText" class="badge-pill badge-soft">{{ badgeText }}</span>
           <h1>{{ model.nome }}</h1>
-          <p v-if="model.descricao" class="product-desc">{{ model.descricao }}</p>
+          <p v-if="description" class="product-desc">{{ description }}</p>
           <p v-else class="product-desc">
-            Seleccione a cor{{ storefrontCtx?.picker ? ` e a ${String(storefrontCtx.picker.label || 'variante').toLowerCase()}` : '' }},
-            indique a quantidade e adicione ao pedido de orçamento.
+            Selecione a cor{{
+              storefrontCtx?.picker
+                ? ` e a ${String(storefrontCtx.picker.label || 'variante').toLowerCase()}`
+                : ''
+            }}, indique a quantidade e adicione ao pedido de orçamento.
           </p>
         </header>
 
@@ -285,6 +358,7 @@ watch(() => route.fullPath, fetchProduct)
               type="button"
               class="picker-chip"
               :class="{ 'is-active': selectedPicker?.id === option.id }"
+              :aria-pressed="selectedPicker?.id === option.id"
               @click="selectPicker(option)"
             >
               {{ option.label }}
@@ -298,10 +372,7 @@ watch(() => route.fullPath, fetchProduct)
           <h2 class="buy-title">Pedido de orçamento</h2>
           <p class="buy-note">{{ MIN_ORCAMENTO_MSG }}</p>
 
-          <label class="field-label qty-block">
-            Quantidade
-            <QtySelect v-model="selectedQty" :step="qtyStep" :min="qtyMin" />
-          </label>
+          <QtyInput v-model="selectedQty" class="qty-block" :step="qtyStep" :min="qtyMin" hint />
 
           <div class="cart-actions">
             <button type="button" class="btn btn-primary btn-block" @click="addToCart">
@@ -312,7 +383,13 @@ watch(() => route.fullPath, fetchProduct)
             </button>
           </div>
 
-          <p v-if="addedMsg" class="added-msg" role="status">{{ addedMsg }}</p>
+          <!-- A região existe sempre e só o texto muda: os leitores de ecrã só anunciam com fiabilidade regiões já presentes (ARIA22). -->
+          <div role="status">
+            <p v-if="addedMsg" class="added-msg">
+              {{ addedMsg }} <RouterLink :to="{ name: 'cart' }">Ver pedido</RouterLink>
+            </p>
+          </div>
+          <StorageNotice />
 
           <div v-if="selectedProduct?.ean" class="ref-box">
             <img
@@ -331,7 +408,12 @@ watch(() => route.fullPath, fetchProduct)
         </p>
       </section>
     </article>
-    <ImageLightbox :open="lightboxOpen" :src="displayImage" :alt="model?.nome || 'Produto Diomika'" @close="lightboxOpen = false" />
+    <ImageLightbox
+      :open="lightboxOpen"
+      :src="displayImage"
+      :alt="model?.nome || 'Produto Diomika'"
+      @close="lightboxOpen = false"
+    />
   </div>
 </template>
 
@@ -426,7 +508,9 @@ watch(() => route.fullPath, fetchProduct)
   flex: 0 0 68px;
   cursor: pointer;
   background: none;
-  transition: border-color var(--transition), transform var(--transition);
+  transition:
+    border-color var(--transition),
+    transform var(--transition);
 }
 
 .color-thumb-btn:hover {

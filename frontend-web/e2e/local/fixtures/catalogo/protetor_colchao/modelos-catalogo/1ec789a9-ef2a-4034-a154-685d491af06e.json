@@ -1,0 +1,465 @@
+[
+  {
+    "dimensoes": [
+      "90x200",
+      "100x200",
+      "150x200",
+      "160x200",
+      "180x200",
+      "200x200"
+    ],
+    "composicao": {
+      "Poliéster": 100
+    },
+    "id": "7beaad2f-dad2-4965-a7fb-4a83102e8aa8",
+    "id_categoria": "1ec789a9-ef2a-4034-a154-685d491af06e",
+    "tipo_catalogo": "protetor_colchao",
+    "nome": "Protetor Colchão Malha",
+    "slug": "protetor-colchao-malha",
+    "descricao": "Sem descrição",
+    "attributes": {
+      "dimensoes": [
+        "90x200",
+        "100x200",
+        "150x200",
+        "160x200",
+        "180x200",
+        "200x200"
+      ],
+      "composicao": {
+        "Poliéster": 100
+      }
+    },
+    "visibilidade": true,
+    "created_at": "2026-08-28T12:21:20.681304+00:00",
+    "updated_at": "2026-10-03T16:21:02.067387+00:00",
+    "categories": {
+      "id": "1ec789a9-ef2a-4034-a154-685d491af06e",
+      "nome": "Protetor de Colchão",
+      "slug": "protetores-colchao",
+      "carrinho_min": 12,
+      "carrinho_step": 12,
+      "tipo_catalogo": "protetor_colchao"
+    },
+    "product_variants": [
+      {
+        "dimensoes": "100x200",
+        "id": "9528534c-323f-4c78-b273-84810abc58f9",
+        "ean": "5606044500282",
+        "attributes": {
+          "dimensoes": "100x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500282.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "150x200",
+        "id": "aedd01a8-6549-448d-b656-29d291630a3d",
+        "ean": "5606044500329",
+        "attributes": {
+          "dimensoes": "150x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500329.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "160x200",
+        "id": "87051169-ae54-4eb1-946a-54f3b3482f73",
+        "ean": "5606044500336",
+        "attributes": {
+          "dimensoes": "160x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500336.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "180x200",
+        "id": "db7a9f18-40c4-498c-af99-dae623e56964",
+        "ean": "5606044500343",
+        "attributes": {
+          "dimensoes": "180x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500343.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "200x200",
+        "id": "d172bb87-eafa-494b-a392-b2dd34a8d67c",
+        "ean": "5606044500350",
+        "attributes": {
+          "dimensoes": "200x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500350.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "90x200",
+        "id": "d1ef68a0-8845-4e29-8557-4a01148cd815",
+        "ean": "5606044500275",
+        "attributes": {
+          "dimensoes": "90x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500275.png?token=expirado",
+        "visibilidade": true
+      }
+    ],
+    "modelo_cores": [
+      {
+        "id_modelo": "7beaad2f-dad2-4965-a7fb-4a83102e8aa8",
+        "numero": 1,
+        "nome": "Sortido",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_protetor_colchao_cores/imagem/3a74d9542c1545e3a2b9a4eea96a131d.png",
+        "visibilidade": true
+      }
+    ],
+    "_tipo_catalogo": "protetor_colchao",
+    "_storefront": {
+      "mode": "variantes",
+      "product_table": "product_variants",
+      "picker": {
+        "source": "products",
+        "field": "dimensoes",
+        "label": "Dimensão (comprimento×largura)",
+        "format": "dimensions",
+        "suffix": " cm"
+      },
+      "specs": [
+        {
+          "field": "composicao",
+          "label": "Composição (%) — igual para todas as cores",
+          "widget": "composition",
+          "enum_labels": {}
+        },
+        {
+          "field": "dimensoes",
+          "label": "Dimensões (comprimento×largura)",
+          "widget": "dimension_list",
+          "enum_labels": {}
+        }
+      ],
+      "badge": null
+    },
+    "_storefront_mode": "variantes"
+  },
+  {
+    "dimensoes": [
+      "90x200",
+      "100x200",
+      "105x200",
+      "120x200",
+      "140x200",
+      "150x200",
+      "160x200",
+      "180x200",
+      "200x200"
+    ],
+    "composicao": {
+      "Poliéster": 100
+    },
+    "id": "fcbd0e24-0cf1-43db-b154-858a656a53b2",
+    "id_categoria": "1ec789a9-ef2a-4034-a154-685d491af06e",
+    "tipo_catalogo": "protetor_colchao",
+    "nome": "Protetor Colchao Malha Texturizada",
+    "slug": "protetor-colchao-malha-texturizada",
+    "descricao": "Sem descrição",
+    "attributes": {
+      "dimensoes": [
+        "90x200",
+        "100x200",
+        "105x200",
+        "120x200",
+        "140x200",
+        "150x200",
+        "160x200",
+        "180x200",
+        "200x200"
+      ],
+      "composicao": {
+        "Poliéster": 100
+      }
+    },
+    "visibilidade": true,
+    "created_at": "2026-08-28T12:45:59.755569+00:00",
+    "updated_at": "2026-10-03T16:21:02.067387+00:00",
+    "categories": {
+      "id": "1ec789a9-ef2a-4034-a154-685d491af06e",
+      "nome": "Protetor de Colchão",
+      "slug": "protetores-colchao",
+      "carrinho_min": 12,
+      "carrinho_step": 12,
+      "tipo_catalogo": "protetor_colchao"
+    },
+    "product_variants": [
+      {
+        "dimensoes": "100x200",
+        "id": "356d3c84-42ea-431b-9083-821ff23969a6",
+        "ean": "5606044500466",
+        "attributes": {
+          "dimensoes": "100x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500466.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "105x200",
+        "id": "36d63d56-7f1e-4198-82b1-130a05c34d67",
+        "ean": "5606044500473",
+        "attributes": {
+          "dimensoes": "105x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500473.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "120x200",
+        "id": "1159a471-fcd2-402a-845e-7333efd9135a",
+        "ean": "5606044500480",
+        "attributes": {
+          "dimensoes": "120x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500480.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "140x200",
+        "id": "f8b197d2-b95a-4963-8907-1a85a0416221",
+        "ean": "5606044500497",
+        "attributes": {
+          "dimensoes": "140x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500497.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "150x200",
+        "id": "f9a34e5c-bb0f-47e0-b83e-7143f68e24b6",
+        "ean": "5606044500503",
+        "attributes": {
+          "dimensoes": "150x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500503.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "160x200",
+        "id": "d77d8799-e7c4-40e0-ab51-6963a1d10926",
+        "ean": "5606044500510",
+        "attributes": {
+          "dimensoes": "160x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500510.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "180x200",
+        "id": "68dd3354-a513-4e9e-86b8-6253b54358dd",
+        "ean": "5606044500527",
+        "attributes": {
+          "dimensoes": "180x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500527.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "200x200",
+        "id": "95a5a40e-0e87-41dd-8734-596920dc1ff4",
+        "ean": "5606044500534",
+        "attributes": {
+          "dimensoes": "200x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500534.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "90x200",
+        "id": "48b1dcd3-f5ef-49ec-93da-a6eba964ce40",
+        "ean": "5606044500459",
+        "attributes": {
+          "dimensoes": "90x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500459.png?token=expirado",
+        "visibilidade": true
+      }
+    ],
+    "modelo_cores": [
+      {
+        "id_modelo": "fcbd0e24-0cf1-43db-b154-858a656a53b2",
+        "numero": 1,
+        "nome": "Sortido",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_protetor_colchao_cores/imagem/af5027f82b2e47c49222b1a68381c141.png",
+        "visibilidade": true
+      }
+    ],
+    "_tipo_catalogo": "protetor_colchao",
+    "_storefront": {
+      "mode": "variantes",
+      "product_table": "product_variants",
+      "picker": {
+        "source": "products",
+        "field": "dimensoes",
+        "label": "Dimensão (comprimento×largura)",
+        "format": "dimensions",
+        "suffix": " cm"
+      },
+      "specs": [
+        {
+          "field": "composicao",
+          "label": "Composição (%) — igual para todas as cores",
+          "widget": "composition",
+          "enum_labels": {}
+        },
+        {
+          "field": "dimensoes",
+          "label": "Dimensões (comprimento×largura)",
+          "widget": "dimension_list",
+          "enum_labels": {}
+        }
+      ],
+      "badge": null
+    },
+    "_storefront_mode": "variantes"
+  },
+  {
+    "dimensoes": [
+      "90x200",
+      "100x200",
+      "150x200",
+      "160x200",
+      "180x200",
+      "200x200"
+    ],
+    "composicao": {
+      "PVC": 100
+    },
+    "id": "4c49acab-6778-483d-844a-c2257f22fffc",
+    "id_categoria": "1ec789a9-ef2a-4034-a154-685d491af06e",
+    "tipo_catalogo": "protetor_colchao",
+    "nome": "Protetor Colchão PVC",
+    "slug": "protetor-colchao-pvc",
+    "descricao": "Sem descrição",
+    "attributes": {
+      "dimensoes": [
+        "90x200",
+        "100x200",
+        "150x200",
+        "160x200",
+        "180x200",
+        "200x200"
+      ],
+      "composicao": {
+        "PVC": 100
+      }
+    },
+    "visibilidade": true,
+    "created_at": "2026-08-28T12:47:32.903841+00:00",
+    "updated_at": "2026-10-03T16:21:02.067387+00:00",
+    "categories": {
+      "id": "1ec789a9-ef2a-4034-a154-685d491af06e",
+      "nome": "Protetor de Colchão",
+      "slug": "protetores-colchao",
+      "carrinho_min": 12,
+      "carrinho_step": 12,
+      "tipo_catalogo": "protetor_colchao"
+    },
+    "product_variants": [
+      {
+        "dimensoes": "100x200",
+        "id": "4302428f-8d10-423e-8661-dcb3b649c9a8",
+        "ean": "5606044500428",
+        "attributes": {
+          "dimensoes": "100x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500428.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "150x200",
+        "id": "0a95fc36-4c38-4e26-860c-7584f7cec6cc",
+        "ean": "5606044500398",
+        "attributes": {
+          "dimensoes": "150x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500398.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "160x200",
+        "id": "f6ec5816-37d5-4776-996c-ba473f093822",
+        "ean": "5606044500381",
+        "attributes": {
+          "dimensoes": "160x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500381.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "180x200",
+        "id": "c89a9611-bb7f-4c1b-91d9-28bb53cb8494",
+        "ean": "5606044500374",
+        "attributes": {
+          "dimensoes": "180x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500374.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "200x200",
+        "id": "aaa56ee2-f15d-457a-b96c-46f290f67c15",
+        "ean": "5606044500367",
+        "attributes": {
+          "dimensoes": "200x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500367.png?token=expirado",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "90x200",
+        "id": "4e0b9e3f-2ee7-489e-a74d-9a570765c36a",
+        "ean": "5606044500442",
+        "attributes": {
+          "dimensoes": "90x200"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500442.png?token=expirado",
+        "visibilidade": true
+      }
+    ],
+    "modelo_cores": [
+      {
+        "id_modelo": "4c49acab-6778-483d-844a-c2257f22fffc",
+        "numero": 1,
+        "nome": "Sortido",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_protetor_colchao_cores/imagem/2b56c997778b414488dbfe2301fd87a1.png",
+        "visibilidade": true
+      }
+    ],
+    "_tipo_catalogo": "protetor_colchao",
+    "_storefront": {
+      "mode": "variantes",
+      "product_table": "product_variants",
+      "picker": {
+        "source": "products",
+        "field": "dimensoes",
+        "label": "Dimensão (comprimento×largura)",
+        "format": "dimensions",
+        "suffix": " cm"
+      },
+      "specs": [
+        {
+          "field": "composicao",
+          "label": "Composição (%) — igual para todas as cores",
+          "widget": "composition",
+          "enum_labels": {}
+        },
+        {
+          "field": "dimensoes",
+          "label": "Dimensões (comprimento×largura)",
+          "widget": "dimension_list",
+          "enum_labels": {}
+        }
+      ],
+      "badge": null
+    },
+    "_storefront_mode": "variantes",
+    "_has_more": false
+  }
+]

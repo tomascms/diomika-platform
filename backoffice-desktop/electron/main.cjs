@@ -3,9 +3,10 @@
  * Proxy /api → API cloud com header de gate (WAF + API).
  * Usa electron.net (Chromium) — fiável com antivirus/SSL inspection (AVG, etc.).
  */
-const { app, BrowserWindow, shell, dialog, net, nativeTheme } = require('electron')
+const { app, BrowserWindow, shell, dialog, net, nativeTheme, ipcMain } = require('electron')
 const http = require('http')
 const { setupAutoUpdates } = require('./updater.cjs')
+const { isAppOrigin, hostAllowed } = require('./guards.cjs')
 const fs = require('fs')
 const path = require('path')
 
@@ -202,6 +203,12 @@ function listenOn(server, port) {
 async function createLocalServer() {
   const server = http.createServer((req, res) => {
     try {
+      // Só atende quem fala com 127.0.0.1:<porta>: um DNS-rebinding chega com outro `Host` e não ganha o gate (SEG-15).
+      if (!hostAllowed(req.headers.host, server.address()?.port)) {
+        res.writeHead(421, { 'Content-Type': 'text/plain; charset=utf-8' })
+        res.end('Misdirected Request')
+        return
+      }
       const pathname = new URL(req.url || '/', 'http://127.0.0.1').pathname
       if (pathname === '/api' || pathname.startsWith('/api/')) {
         proxyToApi(req, res)
@@ -244,6 +251,7 @@ async function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      preload: path.join(__dirname, 'preload.cjs'),
     },
   })
 
@@ -258,7 +266,8 @@ async function createWindow() {
   const openSafely = (url) => {
     if (/^(https?:|mailto:)/i.test(url)) shell.openExternal(url)
   }
-  const isAppUrl = (url) => url.startsWith('http://127.0.0.1') || url.startsWith('http://localhost')
+  // A origem inteira, não o prefixo (SEG-15): `http://127.0.0.1.outro-site.com` não é a app.
+  const isAppUrl = (url) => isAppOrigin(url, appOrigin)
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (!isAppUrl(url)) openSafely(url)
@@ -272,17 +281,20 @@ async function createWindow() {
   })
 
   if (isDev) {
+    appOrigin = new URL(process.env.VITE_DEV_SERVER_URL).origin
     await win.loadURL(process.env.VITE_DEV_SERVER_URL)
     return null
   }
 
   const { server, port } = await createLocalServer()
+  appOrigin = `http://127.0.0.1:${port}`
   await win.loadURL(`http://127.0.0.1:${port}/`)
   return server
 }
 
 let localServer = null
 let mainWindow = null
+let appOrigin = null
 
 // Uma só instância: um segundo duplo-clique foca a janela já aberta em vez de
 // arrancar outro servidor local (noutra porta → outra origem, sem a sessão).
@@ -296,6 +308,24 @@ if (!app.requestSingleInstanceLock()) {
     win.focus()
   })
 }
+
+// Gravar a etiqueta (.lbx da Brother): o utilizador escolhe o sítio no diálogo do sistema. Só aceita nomes .lbx e bytes.
+ipcMain.handle('save-label', async (event, payload) => {
+  const fileName = String(payload?.fileName || '')
+  const bytes = payload?.bytes
+  if (!/^[\w.-]+\.lbx$/i.test(fileName) || !(bytes instanceof Uint8Array)) {
+    throw new Error('Pedido de gravação inválido.')
+  }
+  const owner = BrowserWindow.fromWebContents(event.sender) || mainWindow
+  const { canceled, filePath } = await dialog.showSaveDialog(owner, {
+    title: 'Guardar etiqueta',
+    defaultPath: path.join(app.getPath('downloads'), fileName),
+    filters: [{ name: 'Etiqueta Brother', extensions: ['lbx'] }],
+  })
+  if (canceled || !filePath) return { saved: false }
+  await fs.promises.writeFile(filePath, Buffer.from(bytes))
+  return { saved: true, path: filePath }
+})
 
 app.whenReady().then(async () => {
   if (!isDev && !DESKTOP_GATE) {

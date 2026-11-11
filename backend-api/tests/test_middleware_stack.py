@@ -33,7 +33,7 @@ def test_health_live_through_full_stack(client):
     assert resp.status_code == 200
     assert resp.json() == {"status": "alive"}
     assert resp.headers.get("x-request-id")
-    assert resp.headers.get("x-ratelimit-tier") == "human"
+    assert "x-ratelimit-tier" not in resp.headers and "x-ratelimit-remaining" not in resp.headers  # API-11
 
 
 def test_docker_healthcheck_user_agent_is_not_a_bot(client):
@@ -57,7 +57,7 @@ def test_scraper_is_blocked(client):
     [
         "curl/8.5.0",
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0",
-        "Mozilla/5.0 (compatible; DotBot/1.2)",
+        "python-urllib/3.12",
     ],
 )
 def test_blocked_patterns_still_match_at_token_start(ua):

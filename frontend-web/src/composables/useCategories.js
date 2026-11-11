@@ -2,13 +2,16 @@ import { ref } from 'vue'
 import { apiGet } from '@/lib/api'
 import { resolveImageUrls, PLACEHOLDER, needsPrivateSign } from '@/lib/images'
 import { listCategories } from '@/lib/catalogSupabase'
+import { hasModels } from '@/lib/catalogRoutes'
 
 /** Estado partilhado — App.vue e HomeView usam a mesma instância. */
 const categories = ref([])
 const loading = ref(false)
-const error = ref('')
+// O erro do último carregamento falhado (ou null): as vistas mostram o estado «O nosso servidor não respondeu».
+const error = ref(null)
 let loadPromise = null
 
+// O nome está na política de cookies (CookiesView.vue) e no registo RGPD: mudá-lo é mudar texto legal.
 const CACHE_KEY = 'diomika_cats_v6'
 const CACHE_TTL_MS = 5 * 60 * 1000
 
@@ -80,7 +83,7 @@ export function useCategories() {
     }
 
     loading.value = true
-    error.value = ''
+    error.value = null
     loadPromise = (async () => {
       try {
         let raw
@@ -91,7 +94,8 @@ export function useCategories() {
           const data = await listCategories()
           raw = (Array.isArray(data) ? data : []).filter((c) => c.visibilidade !== false)
         }
-        categories.value = raw.map((c) => ({ ...c }))
+        // As categorias sem modelos não se listam (rodapé, início, /categorias): eram becos sem saída (FE-05, RP-03, SEO-04).
+        categories.value = raw.filter(hasModels).map((c) => ({ ...c }))
         writeCatCache(categories.value)
         loading.value = false
         void hydrateCategoryImages(categories.value)
@@ -99,7 +103,7 @@ export function useCategories() {
       } catch (e) {
         // Numa revalidação em segundo plano mantém-se o que já está no ecrã.
         if (!categories.value.length) {
-          error.value = e.message || 'Erro ao carregar categorias.'
+          error.value = e || new Error('Erro ao carregar categorias.')
         }
         throw e
       } finally {

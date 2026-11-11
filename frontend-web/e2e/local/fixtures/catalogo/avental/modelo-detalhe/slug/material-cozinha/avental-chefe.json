@@ -1,0 +1,63 @@
+{
+  "composicao": {
+    "Poliéster": 100
+  },
+  "id": "d2db24c5-94e1-40b5-906c-aa6e53cecbac",
+  "id_categoria": "1b6f633e-3ade-4984-939f-32fecb7867af",
+  "tipo_catalogo": "avental",
+  "nome": "Avental Chefe",
+  "slug": "avental-chefe",
+  "descricao": "Sem descrição",
+  "attributes": {
+    "composicao": {
+      "Poliéster": 100
+    }
+  },
+  "visibilidade": true,
+  "created_at": "2026-08-28T11:00:24.149384+00:00",
+  "updated_at": "2026-10-03T16:21:04.026043+00:00",
+  "categories": {
+    "id": "1b6f633e-3ade-4984-939f-32fecb7867af",
+    "nome": "Material de Cozinha",
+    "carrinho_step": 12,
+    "carrinho_min": 12,
+    "slug": "material-cozinha",
+    "tipo_catalogo": "material_cozinha"
+  },
+  "product_variants": {
+    "id": "a3897317-576e-41de-a90c-cd5a07af097d",
+    "ean": "5606044501142",
+    "id_modelo": "d2db24c5-94e1-40b5-906c-aa6e53cecbac",
+    "attributes": {},
+    "created_at": "2026-08-28T11:15:19.812399+00:00",
+    "updated_at": "2026-10-03T16:21:04.221828+00:00",
+    "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044501142.png?token=expirado",
+    "visibilidade": true,
+    "tipo_catalogo": "avental"
+  },
+  "modelo_cores": [
+    {
+      "id_modelo": "d2db24c5-94e1-40b5-906c-aa6e53cecbac",
+      "numero": 1,
+      "nome": "Sortido",
+      "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_avental_cores/imagem/44c106f6f8be4b0286f8ed60709a4ff3.png",
+      "visibilidade": true
+    }
+  ],
+  "_tipo_catalogo": "avental",
+  "_storefront": {
+    "mode": "unico",
+    "product_table": "product_variants",
+    "picker": null,
+    "specs": [
+      {
+        "field": "composicao",
+        "label": "Composição (%) — igual para todas as cores",
+        "widget": "composition",
+        "enum_labels": {}
+      }
+    ],
+    "badge": null
+  },
+  "_storefront_mode": "unico"
+}

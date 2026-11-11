@@ -49,18 +49,22 @@ def _category_select() -> str:
     return "id, nome, carrinho_step, carrinho_min, slug, tipo_catalogo"
 
 
+_COLOR_BATCH = 80
+
+
 def _attach_modelo_cores(rows: list[dict]) -> None:
     """Cores do modelo — tabela única, partilhada por todas as famílias."""
     if not rows:
         return
     model_ids = [str(row["id"]) for row in rows if row.get("id")]
     cores_by_model: dict[str, list[dict]] = {mid: [] for mid in model_ids}
-    if model_ids:
+    # Em lotes: uma lista `in.(…)` com o catálogo todo passava o limite do URL do PostgREST.
+    for start in range(0, len(model_ids), _COLOR_BATCH):
         direct = (
             get_db()
             .table(PRODUCT_MODEL_COLORS_TABLE)
             .select("id_modelo, numero, nome, imagem, visibilidade")
-            .in_("id_modelo", model_ids)
+            .in_("id_modelo", model_ids[start : start + _COLOR_BATCH])
             .execute()
             .data
             or []
@@ -101,6 +105,32 @@ def _require_public_category(id_categoria: str) -> bool:
     if not rows:
         return False
     return is_visible(rows[0])
+
+
+def showable_model_counts() -> dict[str, int]:
+    """Quantos modelos a loja mostra em cada categoria (id da categoria → n.º); as vazias não aparecem.
+
+    A mesma regra da lista da categoria (`_finalize_model_products`) e do pré-render: modelo visível, com uma cor
+    visível e com uma variante visível que tenha EAN. A API de categorias manda-a à loja para esconder as vazias
+    (auditoria FE-05, RP-03, SEO-04): três guarda-chuvas visíveis, mas sem EAN, davam uma categoria que só mostrava
+    «Ainda não há modelos».
+    """
+    rows = (
+        get_db()
+        .table(PRODUCT_MODELS_TABLE)
+        .select(f"id, id_categoria, {PRODUCT_VARIANTS_TABLE}(ean, visibilidade)")
+        .eq("visibilidade", True)
+        .execute()
+        .data
+        or []
+    )
+    _attach_modelo_cores(rows)
+    counts: dict[str, int] = {}
+    for row in rows:
+        if _modelo_cores(row) and _visible_products(row.get(PRODUCT_VARIANTS_TABLE)):
+            category = str(row.get("id_categoria") or "")
+            counts[category] = counts.get(category, 0) + 1
+    return counts
 
 
 def _flatten_attrs(row: dict) -> dict:
@@ -367,11 +397,15 @@ def _resolve_public_category_id(category_slug: str) -> str | None:
     if not key:
         return None
     query = db.table("categories").select("id,visibilidade,slug").eq("visibilidade", True)
-    if len(key) == 36 and key.count("-") == 4:
-        query = query.eq("id", key)
-    else:
-        query = query.eq("slug", key)
+    is_id = len(key) == 36 and key.count("-") == 4
+    query = query.eq("id", key) if is_id else query.eq("slug", key)
     row = query.limit(1).execute().data
+    if not row and not is_id:
+        # Sem slug gravado, a loja faz o URL a partir do nome (categorySlug em catalogRoutes.js).
+        from core.cache_warmup import slugify
+
+        rows = db.table("categories").select("id,nome").eq("visibilidade", True).execute().data or []
+        row = [r for r in rows if slugify(r.get("nome")) == key.lower()]
     if not row:
         return None
     return str(row[0]["id"])
@@ -392,19 +426,21 @@ def _find_model_id_by_slug(category_id: str, tipo: str, model_key: str) -> str |
         query = query.eq("slug", model_key)
     row = (query.limit(1).execute().data or [None])[0]
     if not row and not (len(model_key) == 36 and model_key.count("-") == 4):
-        row = (
+        # A loja faz o URL a partir do nome («Cinto Extensivel» -> cinto-extensivel), que pode não ser o slug gravado.
+        from core.cache_warmup import slugify
+
+        rows = (
             get_db()
             .table(PRODUCT_MODELS_TABLE)
-            .select("id")
+            .select("id,nome")
             .eq("id_categoria", category_id)
             .eq("tipo_catalogo", tipo)
             .eq("visibilidade", True)
-            .ilike("nome", model_key)
-            .limit(1)
             .execute()
             .data
-            or [None]
-        )[0]
+            or []
+        )
+        row = next((r for r in rows if slugify(r.get("nome")) == model_key.lower()), None)
     return str(row["id"]) if row else None
 
 

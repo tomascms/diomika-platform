@@ -19,6 +19,7 @@ from core.catalog_service import catalogue_for_category, model_detail_for_slugs,
 from core.catalog_storefront import DEFAULT_PAGE_LIMIT
 from core.database import get_db
 from core.local_only import admin_must_be_local
+from core.path_ids import UuidStr
 from models.catalog_registry import (
     CATALOG_TYPES,
     admin_merged_select_query,
@@ -52,7 +53,8 @@ async def get_catalog_version():
 
 @router.get("/search")
 async def search_catalog(q: str = "", limit: int = 40):
-    """Pesquisa modelos por nome, slug ou EAN — substitui preload total no cliente."""
+    """Pesquisa modelos por nome, categoria, cor, medida, material ou EAN, sem acentos nem maiúsculas, com plurais e
+    gralhas (core/catalog_search.py) — substitui o preload total no cliente."""
     from core.catalog_search import search_storefront
 
     needle = (q or "").strip()
@@ -81,7 +83,7 @@ def _require_tipo(tipo: str) -> dict:
 
 
 @router.get("/modelo-detalhe/{id_modelo}")
-async def get_storefront_model_detail_auto(id_modelo: str):
+async def get_storefront_model_detail_auto(id_modelo: UuidStr):
     """Detalhe de modelo — deteta o tipo automaticamente (URLs legadas da loja).
 
     Esquema unificado: o tipo já é uma coluna no próprio registo — 1 query,
@@ -122,7 +124,7 @@ async def get_storefront_model_detail_auto(id_modelo: str):
 @router.get("/{tipo}/modelos-catalogo/{id_categoria}")
 async def list_storefront_catalog(
     tipo: str,
-    id_categoria: str,
+    id_categoria: UuidStr,
     request: Request,
     filter_tipo: str | None = None,
     limit: int = DEFAULT_PAGE_LIMIT,
@@ -183,7 +185,7 @@ async def get_storefront_model_detail_by_slug(tipo: str, category_slug: str, mod
 
 
 @router.get("/{tipo}/modelo-detalhe/{id_modelo}")
-async def get_storefront_model_detail(tipo: str, id_modelo: str):
+async def get_storefront_model_detail(tipo: str, id_modelo: UuidStr):
     _require_tipo(tipo)
     ttl = catalog_cache_ttl()
     cache_key = f"catalog:modelo:{tipo}:{id_modelo}"

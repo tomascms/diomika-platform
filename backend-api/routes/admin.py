@@ -65,6 +65,16 @@ def _normalize_row(row: dict) -> dict:
     return out
 
 
+_FORMULA_START = ("=", "+", "-", "@", chr(9), chr(13))
+
+
+def _csv_safe(value):
+    """Neutraliza fórmulas (SEG-05): texto de visitantes começado por = + - @ não corre no Excel."""
+    if isinstance(value, str) and value.startswith(_FORMULA_START):
+        return "'" + value
+    return value
+
+
 @router.get("/export/{table_name}")
 def export_csv(request: Request, table_name: str):
     from models.catalog_registry import level_for_table, physical_table_for, tipo_for_table
@@ -98,7 +108,10 @@ def export_csv(request: Request, table_name: str):
     writer = csv.DictWriter(output, fieldnames=list(rows[0].keys()), extrasaction="ignore")
     writer.writeheader()
     for row in rows:
-        flat = {k: json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else v for k, v in row.items()}
+        flat = {
+            k: _csv_safe(json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else v)
+            for k, v in row.items()
+        }
         writer.writerow(flat)
 
     output.seek(0)
@@ -107,6 +120,16 @@ def export_csv(request: Request, table_name: str):
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={table_name}.csv"},
     )
+
+
+@router.get("/conteudo-em-falta")
+def content_to_complete(request: Request):
+    """RP-11: modelos com algo por preencher (descrição, composição, EAN, imagem real, mais que a cor «Sortido»)."""
+    from core.missing_content import missing_content
+
+    assert_table_action("categories", "read", getattr(request.state, "api_role", "admin"))
+    items = missing_content()
+    return {"items": items, "count": len(items)}
 
 
 @router.post("/import/{table_name}")
@@ -172,7 +195,19 @@ async def import_csv(
         try:
             # Fora do event loop: uma chamada por linha bloquearia a API durante a importação toda.
             if record_id:
-                await asyncio.to_thread(lambda: db.table(physical_table).update(data).eq("id", record_id).execute())
+                # Só actualiza linhas desta família: um id de outra não pode ser reescrito por este CSV (SEG-20).
+                def _update():
+                    query = db.table(physical_table).update(data).eq("id", record_id)
+                    if tipo and physical_table == "product_model_colors":
+                        # As cores não têm `tipo_catalogo`: a família vem do modelo-pai.
+                        models = db.table("product_models").select("id").eq("tipo_catalogo", tipo).execute().data or []
+                        return query.in_("id_modelo", [m["id"] for m in models]).execute()
+                    return (query.eq("tipo_catalogo", tipo) if tipo else query).execute()
+
+                res = await asyncio.to_thread(_update)
+                if not res.data:
+                    errors.append(f"Linha {idx}: id inexistente nesta categoria")
+                    continue
                 updated += 1
             else:
                 await asyncio.to_thread(lambda: db.table(physical_table).insert(data).execute())

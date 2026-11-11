@@ -4,8 +4,8 @@ Os instaladores levam embutido o segredo do gate desktop, por isso não ficam
 num sítio público: servem-se daqui, debaixo de /system, que em produção só
 responde a pedidos com o header do gate (PrivilegedPathMiddleware + WAF da
 Cloudflare). Não exige login — a app verifica actualizações antes de alguém
-entrar. Os ficheiros são publicados por deploy/publish_backoffice_update.py
-para backend-api/data/desktop-updates (volume persistente na VM).
+entrar. Sem uso desde a passagem para o Render (o disco apaga-se a cada arranque): as versões
+novas entregam-se com o instalador. O publicador (deploy/publish_backoffice_update.py) está no histórico do git.
 """
 from __future__ import annotations
 
@@ -43,13 +43,15 @@ def _resolve(filename: str) -> Path:
 def get_update_file(filename: str):
     path = _resolve(filename)
     is_manifest = path.suffix in (".yml", ".yaml")
+    # A assinatura (.sig) acompanha o manifesto: nunca pode ficar em cache à frente de um manifesto novo (SEG-16).
+    never_cache = is_manifest or path.suffix == ".sig"
     return FileResponse(
         path,
         media_type="text/yaml; charset=utf-8" if is_manifest else "application/octet-stream",
         headers={
             # O manifesto (latest.yml) tem de ser sempre o actual; os binários
             # têm a versão no nome, podem ficar em cache.
-            "Cache-Control": "no-cache" if is_manifest else "private, max-age=86400",
+            "Cache-Control": "no-cache" if never_cache else "private, max-age=86400",
             # Já comprimidos: impede o GZipMiddleware de recomprimir 80 MB na VM.
             "Content-Encoding": "identity",
         },

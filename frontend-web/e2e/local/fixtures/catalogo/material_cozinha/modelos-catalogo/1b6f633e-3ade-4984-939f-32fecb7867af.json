@@ -1,0 +1,615 @@
+[
+  {
+    "composicao": {
+      "Poliéster": 100
+    },
+    "id": "d2db24c5-94e1-40b5-906c-aa6e53cecbac",
+    "id_categoria": "1b6f633e-3ade-4984-939f-32fecb7867af",
+    "tipo_catalogo": "avental",
+    "nome": "Avental Chefe",
+    "slug": "avental-chefe",
+    "descricao": "Sem descrição",
+    "attributes": {
+      "composicao": {
+        "Poliéster": 100
+      }
+    },
+    "visibilidade": true,
+    "created_at": "2026-08-28T11:00:24.149384+00:00",
+    "updated_at": "2026-10-03T16:21:04.026043+00:00",
+    "categories": {
+      "id": "1b6f633e-3ade-4984-939f-32fecb7867af",
+      "nome": "Material de Cozinha",
+      "slug": "material-cozinha",
+      "carrinho_min": 12,
+      "carrinho_step": 12,
+      "tipo_catalogo": "material_cozinha"
+    },
+    "product_variants": {
+      "id": "a3897317-576e-41de-a90c-cd5a07af097d",
+      "ean": "5606044501142",
+      "attributes": {},
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044501142.png?token=expirado",
+      "visibilidade": true
+    },
+    "modelo_cores": [
+      {
+        "id_modelo": "d2db24c5-94e1-40b5-906c-aa6e53cecbac",
+        "numero": 1,
+        "nome": "Sortido",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_avental_cores/imagem/44c106f6f8be4b0286f8ed60709a4ff3.png",
+        "visibilidade": true
+      }
+    ],
+    "_tipo_catalogo": "avental",
+    "_storefront": {
+      "mode": "unico",
+      "product_table": "product_variants",
+      "picker": null,
+      "specs": [
+        {
+          "field": "composicao",
+          "label": "Composição (%) — igual para todas as cores",
+          "widget": "composition",
+          "enum_labels": {}
+        }
+      ],
+      "badge": null
+    },
+    "_storefront_mode": "unico",
+    "_category_tipo": "material_cozinha",
+    "_familia_label": "Aventais"
+  },
+  {
+    "composicao": {
+      "PVC": 100
+    },
+    "id": "4da33cec-e0bc-42b2-a560-da6c775faa1a",
+    "id_categoria": "1b6f633e-3ade-4984-939f-32fecb7867af",
+    "tipo_catalogo": "avental",
+    "nome": "Avental Chefe PVC",
+    "slug": "avental-chefe-pvc",
+    "descricao": "Sem descrição",
+    "attributes": {
+      "composicao": {
+        "PVC": 100
+      }
+    },
+    "visibilidade": true,
+    "created_at": "2026-08-28T11:02:29.614937+00:00",
+    "updated_at": "2026-10-03T16:21:04.026043+00:00",
+    "categories": {
+      "id": "1b6f633e-3ade-4984-939f-32fecb7867af",
+      "nome": "Material de Cozinha",
+      "slug": "material-cozinha",
+      "carrinho_min": 12,
+      "carrinho_step": 12,
+      "tipo_catalogo": "material_cozinha"
+    },
+    "product_variants": {
+      "id": "3a4b45af-4328-4888-87fa-335852468c6d",
+      "ean": "5606044500084",
+      "attributes": {},
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500084.png?token=expirado",
+      "visibilidade": true
+    },
+    "modelo_cores": [
+      {
+        "id_modelo": "4da33cec-e0bc-42b2-a560-da6c775faa1a",
+        "numero": 1,
+        "nome": "Sortido",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_avental_cores/imagem/c75965b7bc1347e9bd2f29f6fb29869e.png",
+        "visibilidade": true
+      }
+    ],
+    "_tipo_catalogo": "avental",
+    "_storefront": {
+      "mode": "unico",
+      "product_table": "product_variants",
+      "picker": null,
+      "specs": [
+        {
+          "field": "composicao",
+          "label": "Composição (%) — igual para todas as cores",
+          "widget": "composition",
+          "enum_labels": {}
+        }
+      ],
+      "badge": null
+    },
+    "_storefront_mode": "unico",
+    "_category_tipo": "material_cozinha",
+    "_familia_label": "Aventais"
+  },
+  {
+    "composicao": {
+      "Poliéster": 100
+    },
+    "id": "b14a3b76-4ee1-4f4a-a028-7957f81a8c98",
+    "id_categoria": "1b6f633e-3ade-4984-939f-32fecb7867af",
+    "tipo_catalogo": "avental",
+    "nome": "Avental Duplo Liso",
+    "slug": "avental-duplo-liso",
+    "descricao": "Sem descrição",
+    "attributes": {
+      "composicao": {
+        "Poliéster": 100
+      }
+    },
+    "visibilidade": true,
+    "created_at": "2026-08-28T11:06:00.807562+00:00",
+    "updated_at": "2026-10-03T16:21:04.026043+00:00",
+    "categories": {
+      "id": "1b6f633e-3ade-4984-939f-32fecb7867af",
+      "nome": "Material de Cozinha",
+      "slug": "material-cozinha",
+      "carrinho_min": 12,
+      "carrinho_step": 12,
+      "tipo_catalogo": "material_cozinha"
+    },
+    "product_variants": {
+      "id": "3cdb9288-595c-40f8-a828-b0dca75491e6",
+      "ean": "5606044500138",
+      "attributes": {},
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500138.png?token=expirado",
+      "visibilidade": true
+    },
+    "modelo_cores": [
+      {
+        "id_modelo": "b14a3b76-4ee1-4f4a-a028-7957f81a8c98",
+        "numero": 1,
+        "nome": "Sortido",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_avental_cores/imagem/a330eed16f6340e7bddfaade0b6f33e1.png",
+        "visibilidade": true
+      }
+    ],
+    "_tipo_catalogo": "avental",
+    "_storefront": {
+      "mode": "unico",
+      "product_table": "product_variants",
+      "picker": null,
+      "specs": [
+        {
+          "field": "composicao",
+          "label": "Composição (%) — igual para todas as cores",
+          "widget": "composition",
+          "enum_labels": {}
+        }
+      ],
+      "badge": null
+    },
+    "_storefront_mode": "unico",
+    "_category_tipo": "material_cozinha",
+    "_familia_label": "Aventais"
+  },
+  {
+    "composicao": {
+      "Poliéster": 100
+    },
+    "id": "cb7bd2c6-55cc-4cac-9320-beb576f41ce6",
+    "id_categoria": "1b6f633e-3ade-4984-939f-32fecb7867af",
+    "tipo_catalogo": "avental",
+    "nome": "Avental Estampado",
+    "slug": "avental-estampado",
+    "descricao": "Sem descrição",
+    "attributes": {
+      "composicao": {
+        "Poliéster": 100
+      }
+    },
+    "visibilidade": true,
+    "created_at": "2026-08-28T11:04:45.534368+00:00",
+    "updated_at": "2026-10-03T16:21:04.026043+00:00",
+    "categories": {
+      "id": "1b6f633e-3ade-4984-939f-32fecb7867af",
+      "nome": "Material de Cozinha",
+      "slug": "material-cozinha",
+      "carrinho_min": 12,
+      "carrinho_step": 12,
+      "tipo_catalogo": "material_cozinha"
+    },
+    "product_variants": {
+      "id": "49c31e64-2af5-4656-95d9-3cd43ae17ed3",
+      "ean": "5606044500107",
+      "attributes": {},
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500107.png?token=expirado",
+      "visibilidade": true
+    },
+    "modelo_cores": [
+      {
+        "id_modelo": "cb7bd2c6-55cc-4cac-9320-beb576f41ce6",
+        "numero": 1,
+        "nome": "Sortido",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_avental_cores/imagem/869a928ce2834122a97740882028311a.png",
+        "visibilidade": true
+      }
+    ],
+    "_tipo_catalogo": "avental",
+    "_storefront": {
+      "mode": "unico",
+      "product_table": "product_variants",
+      "picker": null,
+      "specs": [
+        {
+          "field": "composicao",
+          "label": "Composição (%) — igual para todas as cores",
+          "widget": "composition",
+          "enum_labels": {}
+        }
+      ],
+      "badge": null
+    },
+    "_storefront_mode": "unico",
+    "_category_tipo": "material_cozinha",
+    "_familia_label": "Aventais"
+  },
+  {
+    "composicao": {
+      "Poliéster": 100
+    },
+    "id": "ce5c8548-bf89-4dd4-b047-e8efc3fefd92",
+    "id_categoria": "1b6f633e-3ade-4984-939f-32fecb7867af",
+    "tipo_catalogo": "avental",
+    "nome": "Avental Liso",
+    "slug": "avental-liso",
+    "descricao": "Sem descrição",
+    "attributes": {
+      "composicao": {
+        "Poliéster": 100
+      }
+    },
+    "visibilidade": true,
+    "created_at": "2026-08-28T10:56:12.795578+00:00",
+    "updated_at": "2026-10-03T16:21:04.026043+00:00",
+    "categories": {
+      "id": "1b6f633e-3ade-4984-939f-32fecb7867af",
+      "nome": "Material de Cozinha",
+      "slug": "material-cozinha",
+      "carrinho_min": 12,
+      "carrinho_step": 12,
+      "tipo_catalogo": "material_cozinha"
+    },
+    "product_variants": {
+      "id": "735a4e9d-3408-4084-9def-1f00cf9e77c2",
+      "ean": "5606044500022",
+      "attributes": {},
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500022.png?token=expirado",
+      "visibilidade": true
+    },
+    "modelo_cores": [
+      {
+        "id_modelo": "ce5c8548-bf89-4dd4-b047-e8efc3fefd92",
+        "numero": 1,
+        "nome": "Sortido",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_avental_cores/imagem/2cb1ed52b5634dca88e8d9cf363d9f46.png",
+        "visibilidade": true
+      }
+    ],
+    "_tipo_catalogo": "avental",
+    "_storefront": {
+      "mode": "unico",
+      "product_table": "product_variants",
+      "picker": null,
+      "specs": [
+        {
+          "field": "composicao",
+          "label": "Composição (%) — igual para todas as cores",
+          "widget": "composition",
+          "enum_labels": {}
+        }
+      ],
+      "badge": null
+    },
+    "_storefront_mode": "unico",
+    "_category_tipo": "material_cozinha",
+    "_familia_label": "Aventais"
+  },
+  {
+    "composicao": {
+      "PVC": 100
+    },
+    "id": "97715a23-135d-4aa0-be72-889e9ab80fc6",
+    "id_categoria": "1b6f633e-3ade-4984-939f-32fecb7867af",
+    "tipo_catalogo": "avental",
+    "nome": "Avental PVC",
+    "slug": "avental-pvc",
+    "descricao": "Sem descrição",
+    "attributes": {
+      "composicao": {
+        "PVC": 100
+      }
+    },
+    "visibilidade": true,
+    "created_at": "2026-08-28T10:57:20.716705+00:00",
+    "updated_at": "2026-10-03T16:21:04.026043+00:00",
+    "categories": {
+      "id": "1b6f633e-3ade-4984-939f-32fecb7867af",
+      "nome": "Material de Cozinha",
+      "slug": "material-cozinha",
+      "carrinho_min": 12,
+      "carrinho_step": 12,
+      "tipo_catalogo": "material_cozinha"
+    },
+    "product_variants": {
+      "id": "f93f9682-09d7-40b1-8b28-915788a382fd",
+      "ean": "5606044500053",
+      "attributes": {},
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500053.png?token=expirado",
+      "visibilidade": true
+    },
+    "modelo_cores": [
+      {
+        "id_modelo": "97715a23-135d-4aa0-be72-889e9ab80fc6",
+        "numero": 1,
+        "nome": "Sortido",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_avental_cores/imagem/fda28629577144559df65f7fed780765.png",
+        "visibilidade": true
+      }
+    ],
+    "_tipo_catalogo": "avental",
+    "_storefront": {
+      "mode": "unico",
+      "product_table": "product_variants",
+      "picker": null,
+      "specs": [
+        {
+          "field": "composicao",
+          "label": "Composição (%) — igual para todas as cores",
+          "widget": "composition",
+          "enum_labels": {}
+        }
+      ],
+      "badge": null
+    },
+    "_storefront_mode": "unico",
+    "_has_more": false,
+    "_category_tipo": "material_cozinha",
+    "_familia_label": "Aventais"
+  },
+  {
+    "composicao": {
+      "Poliéster": 100
+    },
+    "id": "0c8f7f2e-480c-419f-954d-b77c0018cd8f",
+    "id_categoria": "1b6f633e-3ade-4984-939f-32fecb7867af",
+    "tipo_catalogo": "luva",
+    "nome": "Luva Estampada",
+    "slug": "luva-estampada",
+    "descricao": "Sem descrição",
+    "attributes": {
+      "composicao": {
+        "Poliéster": 100
+      }
+    },
+    "visibilidade": true,
+    "created_at": "2026-08-28T11:23:10.78824+00:00",
+    "updated_at": "2026-10-03T16:21:04.026043+00:00",
+    "categories": {
+      "id": "1b6f633e-3ade-4984-939f-32fecb7867af",
+      "nome": "Material de Cozinha",
+      "slug": "material-cozinha",
+      "carrinho_min": 12,
+      "carrinho_step": 12,
+      "tipo_catalogo": "material_cozinha"
+    },
+    "product_variants": {
+      "id": "31c07cde-bbfc-4a93-a66c-6f38bd34a7c1",
+      "ean": "5606044501197",
+      "attributes": {},
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044501197.png?token=expirado",
+      "visibilidade": true
+    },
+    "modelo_cores": [
+      {
+        "id_modelo": "0c8f7f2e-480c-419f-954d-b77c0018cd8f",
+        "numero": 1,
+        "nome": "Sortido",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_luva_cores/imagem/507d45aeb8714553a4650c3a2040617e.png",
+        "visibilidade": true
+      }
+    ],
+    "_tipo_catalogo": "luva",
+    "_storefront": {
+      "mode": "unico",
+      "product_table": "product_variants",
+      "picker": null,
+      "specs": [
+        {
+          "field": "composicao",
+          "label": "Composição (%) — igual para todas as cores",
+          "widget": "composition",
+          "enum_labels": {}
+        }
+      ],
+      "badge": null
+    },
+    "_storefront_mode": "unico",
+    "_category_tipo": "material_cozinha",
+    "_familia_label": "Luvas"
+  },
+  {
+    "composicao": {
+      "Poliéster": 100
+    },
+    "id": "07f8778e-1057-49cb-bf39-82fa0e90f3cf",
+    "id_categoria": "1b6f633e-3ade-4984-939f-32fecb7867af",
+    "tipo_catalogo": "luva",
+    "nome": "Luva Lisa",
+    "slug": "luva-lisa",
+    "descricao": "Sem descrição",
+    "attributes": {
+      "composicao": {
+        "Poliéster": 100
+      }
+    },
+    "visibilidade": true,
+    "created_at": "2026-08-28T11:23:44.375234+00:00",
+    "updated_at": "2026-10-03T16:21:04.026043+00:00",
+    "categories": {
+      "id": "1b6f633e-3ade-4984-939f-32fecb7867af",
+      "nome": "Material de Cozinha",
+      "slug": "material-cozinha",
+      "carrinho_min": 12,
+      "carrinho_step": 12,
+      "tipo_catalogo": "material_cozinha"
+    },
+    "product_variants": {
+      "id": "de495139-ce84-4fd5-9500-5493e991974a",
+      "ean": "5606044501296",
+      "attributes": {},
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044501296.png?token=expirado",
+      "visibilidade": true
+    },
+    "modelo_cores": [
+      {
+        "id_modelo": "07f8778e-1057-49cb-bf39-82fa0e90f3cf",
+        "numero": 1,
+        "nome": "Sortido",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_luva_cores/imagem/2483e0812f7646fbafadce1b2870f25a.png",
+        "visibilidade": true
+      }
+    ],
+    "_tipo_catalogo": "luva",
+    "_storefront": {
+      "mode": "unico",
+      "product_table": "product_variants",
+      "picker": null,
+      "specs": [
+        {
+          "field": "composicao",
+          "label": "Composição (%) — igual para todas as cores",
+          "widget": "composition",
+          "enum_labels": {}
+        }
+      ],
+      "badge": null
+    },
+    "_storefront_mode": "unico",
+    "_has_more": false,
+    "_category_tipo": "material_cozinha",
+    "_familia_label": "Luvas"
+  },
+  {
+    "composicao": {
+      "Poliéster": 100
+    },
+    "id": "b6c1f08b-636b-4151-b6fd-1d8c122f78d4",
+    "id_categoria": "1b6f633e-3ade-4984-939f-32fecb7867af",
+    "tipo_catalogo": "pega",
+    "nome": "Pega Estampada",
+    "slug": "pega-estampada",
+    "descricao": "Sem descrição",
+    "attributes": {
+      "composicao": {
+        "Poliéster": 100
+      }
+    },
+    "visibilidade": true,
+    "created_at": "2026-08-28T11:19:09.51208+00:00",
+    "updated_at": "2026-10-03T16:21:04.026043+00:00",
+    "categories": {
+      "id": "1b6f633e-3ade-4984-939f-32fecb7867af",
+      "nome": "Material de Cozinha",
+      "slug": "material-cozinha",
+      "carrinho_min": 12,
+      "carrinho_step": 12,
+      "tipo_catalogo": "material_cozinha"
+    },
+    "product_variants": {
+      "id": "10b829a7-6f85-4a58-872b-5e677db358ec",
+      "ean": "5606044501180",
+      "attributes": {},
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044501180.png?token=expirado",
+      "visibilidade": true
+    },
+    "modelo_cores": [
+      {
+        "id_modelo": "b6c1f08b-636b-4151-b6fd-1d8c122f78d4",
+        "numero": 1,
+        "nome": "Sortido",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_pega_cores/imagem/38ef18c9cd9848eeb953c992947d6abb.png",
+        "visibilidade": true
+      }
+    ],
+    "_tipo_catalogo": "pega",
+    "_storefront": {
+      "mode": "unico",
+      "product_table": "product_variants",
+      "picker": null,
+      "specs": [
+        {
+          "field": "composicao",
+          "label": "Composição (%) — igual para todas as cores",
+          "widget": "composition",
+          "enum_labels": {}
+        }
+      ],
+      "badge": null
+    },
+    "_storefront_mode": "unico",
+    "_category_tipo": "material_cozinha",
+    "_familia_label": "Pegas"
+  },
+  {
+    "composicao": {
+      "Poliéster": 100
+    },
+    "id": "269b1b33-167c-455b-9acf-3a950a56d0a1",
+    "id_categoria": "1b6f633e-3ade-4984-939f-32fecb7867af",
+    "tipo_catalogo": "pega",
+    "nome": "Pega Lisa",
+    "slug": "pega-lisa",
+    "descricao": "Sem descrição",
+    "attributes": {
+      "composicao": {
+        "Poliéster": 100
+      }
+    },
+    "visibilidade": true,
+    "created_at": "2026-08-28T11:21:43.225846+00:00",
+    "updated_at": "2026-10-03T16:21:04.026043+00:00",
+    "categories": {
+      "id": "1b6f633e-3ade-4984-939f-32fecb7867af",
+      "nome": "Material de Cozinha",
+      "slug": "material-cozinha",
+      "carrinho_min": 12,
+      "carrinho_step": 12,
+      "tipo_catalogo": "material_cozinha"
+    },
+    "product_variants": {
+      "id": "09266fb1-db97-43c7-8b2e-6af167596cb8",
+      "ean": "5606044501289",
+      "attributes": {},
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044501289.png?token=expirado",
+      "visibilidade": true
+    },
+    "modelo_cores": [
+      {
+        "id_modelo": "269b1b33-167c-455b-9acf-3a950a56d0a1",
+        "numero": 1,
+        "nome": "Sortido",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_pega_cores/imagem/dab033bed8864c05a60c50134e37f115.png",
+        "visibilidade": true
+      }
+    ],
+    "_tipo_catalogo": "pega",
+    "_storefront": {
+      "mode": "unico",
+      "product_table": "product_variants",
+      "picker": null,
+      "specs": [
+        {
+          "field": "composicao",
+          "label": "Composição (%) — igual para todas as cores",
+          "widget": "composition",
+          "enum_labels": {}
+        }
+      ],
+      "badge": null
+    },
+    "_storefront_mode": "unico",
+    "_has_more": false,
+    "_category_tipo": "material_cozinha",
+    "_familia_label": "Pegas"
+  }
+]

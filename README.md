@@ -9,8 +9,8 @@ e operados de ponta a ponta por uma pessoa, com **0 € de infraestrutura**.
 
 > **EN —** Production B2B catalogue and quote-request platform for a Portuguese home-textiles
 > supplier. Vue 3 storefront on Cloudflare Pages (edge-cached catalogue, prerendered SEO pages),
-> FastAPI backend in Docker on a free GCP e2-micro behind Cloudflare Tunnel, Supabase Postgres,
-> and an auto-updating Electron backoffice. Built, secured, measured and run solo at zero hosting
+> FastAPI backend in Docker on Render's free plan behind Cloudflare, Supabase Postgres,
+> and an Electron backoffice (catalogue, messages, quotes, printable labels). Built, secured, measured and run solo at zero hosting
 > cost. Docs are in Portuguese; see *Destaques* below for the engineering highlights.
 
 ## O problema
@@ -25,21 +25,22 @@ flowchart LR
   V[Visitante] -->|HTTPS| CF[Cloudflare<br/>WAF · rate limit · CDN]
   CF --> P[Pages<br/>loja Vue 3 pré-renderizada]
   P -->|/api/*| E[Pages Function<br/>cache do catálogo por versão]
-  E -->|Tunnel, sem portas abertas| API[FastAPI em Docker<br/>VM e2-micro GCP]
+  E -->|HTTPS| API[FastAPI em Docker<br/>Render free, Frankfurt]
   B[Backoffice Electron] -->|token + gate| CF
   API --> R[(Redis<br/>cache · rate limit · sessões)]
   API --> DB[(Supabase Postgres<br/>+ Storage de imagens)]
-  API --> M[SMTP/IMAP<br/>respostas por email]
-  GH[GitHub Actions] -->|Workload Identity, sem chaves| API
+  API --> M[Gmail API + IMAP<br/>respostas por email]
+  GH[GitHub Actions] -->|deploy da loja · backup diário| P
+  W[Vigia<br/>Cloudflare cron] -->|10 em 10 min| API
 ```
 
 | Peça | Pasta | Tecnologia | Onde corre |
 |---|---|---|---|
 | Loja | [`frontend-web/`](frontend-web) | Vue 3, Vite, Pages Functions | Cloudflare Pages |
-| API | [`backend-api/`](backend-api) | Python 3.12, FastAPI, Redis | Docker na GCP e2-micro (Always Free), Cloudflare Tunnel |
+| API | [`backend-api/`](backend-api) | Python 3.12, FastAPI, Redis | Docker no Render (plano free), atrás da Cloudflare |
 | Base de dados | [`db/`](db) | PostgreSQL (Supabase), RLS, migrações versionadas | Supabase Free (Irlanda) |
-| Backoffice | [`backoffice-desktop/`](backoffice-desktop) | Electron, Vue 3, auto-update | PCs do cliente |
-| Operação | [`deploy/`](deploy), [`.github/`](.github/workflows) | Bash, Python, GitHub Actions | VM + CI |
+| Backoffice | [`backoffice-desktop/`](backoffice-desktop) | Electron, Vue 3 | PC do cliente (Windows e macOS) |
+| Operação | [`deploy/`](deploy), [`.github/`](.github/workflows) | Bash, Python, GitHub Actions | Render + CI |
 
 ## Destaques (medidos em produção)
 
@@ -55,8 +56,7 @@ flowchart LR
 - TTFB p95 **< 200 ms** através da Cloudflare.
 
 **Segurança**
-- VM sem portas abertas: API exposta só por Cloudflare Tunnel; SSH só por IAP.
-- Deploy do GitHub para a GCP por **Workload Identity Federation** (sem chaves de serviço).
+- API atrás do proxy da Cloudflare (WAF e rate limit); estado persistente no Supabase com RLS sem políticas (só a chave de serviço).
 - CSP estrita sem `unsafe-inline`/`unsafe-eval`, HSTS preload, COOP/CORP — verificadas no CI
   ([`verify_csp.py`](deploy/verify_csp.py)) depois de um incidente real em que a CSP partiu os formulários.
 - Turnstile + rate limiting em três camadas (Cloudflare, Redis por IP/utilizador, concorrência do uvicorn).
@@ -65,17 +65,24 @@ flowchart LR
   gitleaks/Trivy/Bandit no CI, logs com segredos e emails mascarados.
 
 **Fiabilidade e operação**
-- Deploy da API com **recuo automático** para a imagem anterior se `/health/live` falhar.
-- Backup diário da BD (incluindo utilizadores do backoffice) com script de **teste de restauro**
-  que compara contagens com produção; idempotência nos formulários
+- Deploy da API sem corte: o Render só troca de versão quando `/health/live` responde; vigia de 10 em 10 min à API e à loja.
+- Backup diário da BD (incluindo utilizadores do backoffice) no GitHub Actions, verificado com `pg_restore --list`; idempotência nos formulários
   (`Idempotency-Key`) e *outbox* para emails que falham.
 - Logs JSON estruturados com `request_id`, Sentry, `/metrics` Prometheus protegido, UptimeRobot.
 - Auditoria de requisitos não funcionais com correcções e medições:
-  [`docs/auditoria-rnf-2026-10-22.md`](docs/auditoria-rnf-2026-10-22.md) e
   [`docs/conformidade-rnf.md`](docs/conformidade-rnf.md).
 
+**Backoffice desktop**
+- Actualizações automáticas com assinatura própria verificada antes de instalar
+  ([`update-signature.cjs`](backoffice-desktop/electron/update-signature.cjs)), sem certificado pago.
+- Etiquetas Brother (.lbx) desenhadas como uma só imagem 1-bit a 300 DPI com o tamanho exacto da área
+  imprimível, com QR e EAN-13; validadas no motor de render da própria Brother (b-PAC) e com os códigos
+  descodificados ([`etiquetaImagem.js`](backoffice-desktop/src/lib/etiquetaImagem.js)).
+- Criação de modelos guiada: categoria, família e subcategoria escolhidas antes do formulário, que
+  mostra só os campos que essa combinação exige (gerados a partir do esquema da API).
+
 **Qualidade**
-- 252 testes de backend (isolados: nunca tocam em produção), cobertura com mínimo no CI;
+- 630 testes de backend (isolados: nunca tocam em produção), cobertura com mínimo no CI;
   testes de regressão para cada defeito corrigido (ex.: o event loop não pode bloquear durante
   um envio de formulário).
 - Esquema de catálogo unificado e orientado a dados: uma família de produto nova é **uma entrada
@@ -87,19 +94,19 @@ flowchart LR
 | **Backend e APIs** — FastAPI assíncrono, RBAC, sessões revogáveis, idempotência, sagas/outbox | [`backend-api/`](backend-api), [`core/session_tokens.py`](backend-api/core/session_tokens.py), [`core/saga/`](backend-api/core/saga) |
 | **Frontend e performance web** — Vue 3, pré-renderização SEO, Core Web Vitals medidos e corrigidos | [`frontend-web/`](frontend-web), [`scripts/prerender-seo.mjs`](frontend-web/scripts/prerender-seo.mjs), [`SoftImage.vue`](frontend-web/src/components/SoftImage.vue) |
 | **Edge computing** — cache por versão, *stale-if-error*, CSP no edge | [`functions/api/[[path]].js`](frontend-web/functions/api/%5B%5Bpath%5D%5D.js), [`functions/_middleware.js`](frontend-web/functions/_middleware.js) |
-| **Aplicação desktop** — Electron com auto-update, proxy local, distribuição Windows/macOS/Linux | [`backoffice-desktop/`](backoffice-desktop), [`electron/updater.cjs`](backoffice-desktop/electron/updater.cjs) |
-| **Cloud e infraestrutura** — GCP, Docker Compose, Cloudflare Tunnel/WAF/Pages, IAP, Workload Identity | [`deploy/`](deploy), [`docs/gcp-identidade-deploy.md`](docs/gcp-identidade-deploy.md) |
+| **Aplicação desktop** — Electron, proxy local, etiquetas Brother (.lbx) com QR e código de barras, Windows/macOS | [`backoffice-desktop/`](backoffice-desktop), [`src/lib/etiquetaLbx.js`](backoffice-desktop/src/lib/etiquetaLbx.js) |
+| **Cloud e infraestrutura** — Render (API via API REST), Docker, Cloudflare WAF/Pages/Workers cron | [`deploy/render_setup.py`](deploy/render_setup.py), [`deploy/watchdog/`](deploy/watchdog) |
 | **Segurança aplicacional** — CSP, rate limiting em camadas, SSRF guard, RLS, redacção de logs, verificações no CI | [`deploy/verify_*.py`](deploy/README.md#verificar-ci-e-pós-deploy), [`core/ssrf_guard.py`](backend-api/core/ssrf_guard.py) |
-| **Dados** — modelo de catálogo unificado orientado a esquema, migrações versionadas, backups e restauro | [`db/`](db), [`models/catalog_attributes.py`](backend-api/models/catalog_attributes.py), [`deploy/vm/`](deploy/vm) |
-| **SRE / operação** — deploy com recuo automático, métricas Prometheus, logs estruturados, runbook | [`deploy/vm/remote_deploy.sh`](deploy/vm/remote_deploy.sh), [`core/metrics.py`](backend-api/core/metrics.py), [`docs/runbook.md`](docs/runbook.md) |
-| **Engenharia de qualidade** — auditoria de requisitos não funcionais com medições e correcções | [`docs/auditoria-rnf-2026-10-22.md`](docs/auditoria-rnf-2026-10-22.md), [`docs/conformidade-rnf.md`](docs/conformidade-rnf.md) |
+| **Dados** — modelo de catálogo unificado orientado a esquema, migrações versionadas, backups e restauro | [`db/`](db), [`models/catalog_attributes.py`](backend-api/models/catalog_attributes.py), [`db-backup.yml`](.github/workflows/db-backup.yml) |
+| **SRE / operação** — deploy sem corte, vigia, métricas Prometheus, logs estruturados, runbook | [`deploy/watchdog/`](deploy/watchdog), [`core/metrics.py`](backend-api/core/metrics.py), [`docs/runbook.md`](docs/runbook.md) |
+| **Engenharia de qualidade** — auditoria de requisitos não funcionais com medições e correcções | [`docs/conformidade-rnf.md`](docs/conformidade-rnf.md), [`docs/auditoria-backoffice.md`](docs/auditoria-backoffice.md) |
 | **Produto e cliente** — documentação para o utilizador final | [`docs/guia-cliente.md`](docs/guia-cliente.md) |
 
 ## Decisões de engenharia
 | Decisão | Porquê | Custo aceite |
 |---|---|---|
-| VM gratuita + Tunnel em vez de PaaS | 0 €/mês; sem IP público a atacar | 1 só instância (sem alta disponibilidade) |
-| Cache no edge com versão do catálogo | Visitantes servidos perto deles; a API nos EUA deixa de pesar | Pedido extra de versão a cada 5 s por PoP |
+| Render free + vigia que o mantém acordado | 0 €/mês, sem cartão; deploy a cada push | 1 só instância, 0,1 CPU, disco efémero (estado no Supabase) |
+| Cache no edge com versão do catálogo | Visitantes servidos perto deles; a API em Frankfurt pesa ainda menos | Pedido extra de versão a cada 5 s por PoP |
 | Miniaturas geradas no upload | Transformação de imagens da Supabase é paga | Backfill para imagens antigas |
 | 1 worker uvicorn + `asyncio.to_thread` para I/O síncrono | Cabe em 1 GB de RAM | Débito limitado na origem (o edge absorve leituras) |
 | Pré-renderização no build em vez de SSR | Páginas estáticas, sem servidor de render | Conteúdo visível montado em JS |
@@ -110,7 +117,7 @@ flowchart LR
 backend-api/        API FastAPI: routes/, core/ (auth, cache, sagas, segurança), models/, workers/, tests/
 frontend-web/       Loja Vue 3: src/, functions/ (edge), scripts/prerender-seo.mjs
 backoffice-desktop/ Electron + Vue 3: electron/ (processo principal, updater), src/
-db/                 migrations/ (aplicadas, datadas), legacy/ (histórico), README
+db/                 migrations/ (aplicadas, datadas), README
 deploy/             publicar, verificar, operar — índice em deploy/README.md
 docs/               runbook, guia do cliente, auditorias, entrega ao cliente
 ```
@@ -131,13 +138,14 @@ O `.env` da raiz é de **produção** (ver [`.env.example`](.env.example)); os t
 | [`ci.yml`](.github/workflows/ci.yml) | PR e push | testes + cobertura mínima, Bandit, lint, builds, Trivy |
 | [`security-scan.yml`](.github/workflows/security-scan.yml) | PR, push, semanal | gitleaks, `pip`/`npm audit`, Trivy da imagem |
 | [`deploy-loja.yml`](ops/workflows/deploy-loja.yml) | push em `frontend-web/` | build, verificação de CSP e segredos, publicação, verificação live |
-| [`deploy-api.yml`](ops/workflows/deploy-api.yml) | manual | envia o código e corre [`remote_deploy.sh`](deploy/vm/remote_deploy.sh) na VM |
-| [`backoffice-release.yml`](ops/workflows/backoffice-release.yml) | tag `backoffice-v*` | instaladores Windows/macOS/Linux |
+| [`db-backup.yml`](.github/workflows/db-backup.yml) | diário 03:30 UTC | `pg_dump` da BD, artefacto 14 dias (a API publica-se sozinha no Render a cada push na `main`) |
+| [`uptime.yml`](ops/workflows/uptime.yml) | à mão | verificação da API e da loja (o UptimeRobot e o vigia fazem-na sempre) |
+| [`backoffice-release.yml`](ops/workflows/backoffice-release.yml) | à mão | `.dmg` do Mac, artefacto privado de 1 dia (nunca publicado) |
 
 ## Documentação
 - [Runbook](docs/runbook.md) — deploy, rollback, backups, chaves, incidentes
 - [CHANGELOG](CHANGELOG.md)
-- [Auditoria RNF](docs/auditoria-rnf-2026-10-22.md) · [Matriz de conformidade](docs/conformidade-rnf.md) · [Auditoria do backoffice](docs/auditoria-backoffice.md)
+- [Matriz de conformidade](docs/conformidade-rnf.md) · [Auditoria do backoffice](docs/auditoria-backoffice.md)
 - [Guia do cliente (backoffice)](docs/guia-cliente.md) · [Adicionar família de produto](docs/adicionar-familia.md)
 - [Base de dados](db/README.md) · [Scripts de operação](deploy/README.md)
 

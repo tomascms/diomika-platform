@@ -2,20 +2,14 @@
 import { RouterLink } from 'vue-router'
 import { useCategories } from '@/composables/useCategories'
 import { categoryProductsRoute } from '@/lib/catalogRoutes'
+import { pretty } from '@/lib/describe'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
+import ErrorState from '@/components/ErrorState.vue'
 import SoftImage from '@/components/SoftImage.vue'
 
 const { categories, loading, error, load } = useCategories()
 
-const pretty = (name) => {
-  const t = String(name || '').trim()
-  return t ? t.charAt(0).toUpperCase() + t.slice(1) : ''
-}
-
-const breadcrumbItems = [
-  { label: 'Início', to: { name: 'home' } },
-  { label: 'Catálogo' },
-]
+const breadcrumbItems = [{ label: 'Início', to: { name: 'home' } }, { label: 'Catálogo' }]
 </script>
 
 <template>
@@ -26,24 +20,25 @@ const breadcrumbItems = [
       <div class="page-head-inner">
         <h1 class="page-title">Catálogo</h1>
         <p class="page-lead">
-          Escolha uma categoria para ver os modelos, cores e medidas disponíveis e montar o seu pedido de orçamento.
+          Escolha uma categoria para ver modelos, cores e medidas.
         </p>
       </div>
     </header>
 
     <div class="page-shell page-shell--grid">
-
-      <div v-if="loading && !categories.length" class="grid" aria-busy="true" aria-label="A carregar categorias">
+      <div
+        v-if="loading && !categories.length"
+        class="grid"
+        aria-busy="true"
+        aria-label="A carregar categorias"
+      >
         <div v-for="n in 6" :key="n" class="tile tile--skeleton">
-          <span class="tile-media" />
+          <span class="tile-media skeleton" />
           <span class="tile-body"><span class="sk sk-title" /><span class="sk sk-sub" /></span>
         </div>
       </div>
 
-      <div v-else-if="error && !categories.length" class="alert alert-error state" role="alert">
-        <p>Não foi possível carregar o catálogo. Verifique a ligação e tente de novo.</p>
-        <button type="button" class="btn btn-secondary btn-sm" @click="load(true)">Tentar de novo</button>
-      </div>
+      <ErrorState v-else-if="error && !categories.length" @retry="load(true)" />
 
       <ul v-else-if="categories.length" class="grid">
         <li v-for="(cat, i) in categories" :key="cat.id">
@@ -57,7 +52,9 @@ const breadcrumbItems = [
                 img-class="tile-img"
                 thumb
               />
-              <span v-else class="tile-fallback" aria-hidden="true">{{ pretty(cat.nome).charAt(0) }}</span>
+              <span v-else class="tile-fallback" aria-hidden="true">{{
+                pretty(cat.nome).charAt(0)
+              }}</span>
             </span>
             <span class="tile-body">
               <span class="tile-name">{{ pretty(cat.nome) }}</span>
@@ -68,9 +65,17 @@ const breadcrumbItems = [
       </ul>
 
       <div v-else class="state empty">
-        <p>O catálogo está a ser actualizado. Entretanto, fale connosco para um orçamento.</p>
+        <p>O catálogo está a ser atualizado. Entretanto, fale connosco para um orçamento.</p>
         <RouterLink to="/contacto" class="btn btn-primary">Contactar a Diomika</RouterLink>
       </div>
+
+      <!-- Para quem já conhece as referências ou quer o catálogo em papel (RP-14). -->
+      <p v-if="categories.length" class="shortcuts">
+        Já conhece as referências?
+        <RouterLink to="/pedido-rapido">Pedido rápido por EAN</RouterLink>
+        ·
+        <RouterLink to="/catalogo-imprimir">Catálogo para imprimir ou guardar em PDF</RouterLink>
+      </p>
     </div>
   </div>
 </template>
@@ -109,7 +114,9 @@ const breadcrumbItems = [
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   color: inherit;
-  transition: border-color var(--transition), box-shadow var(--transition);
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition);
 }
 
 .tile:hover {
@@ -182,19 +189,6 @@ const breadcrumbItems = [
   pointer-events: none;
 }
 
-.tile--skeleton .tile-media,
-.sk {
-  background: linear-gradient(90deg, var(--color-bg-soft), var(--color-bg), var(--color-bg-soft));
-  background-size: 200% 100%;
-  animation: shimmer 1.3s ease-in-out infinite;
-}
-
-.sk {
-  display: block;
-  height: 12px;
-  border-radius: var(--radius-sm);
-}
-
 .sk-title {
   width: 45%;
 }
@@ -208,27 +202,19 @@ const breadcrumbItems = [
   gap: 0.6rem;
 }
 
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-.state {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.state p {
-  margin: 0;
-}
-
 .empty {
   padding: 2rem;
   border: 1px dashed var(--color-border-strong);
   border-radius: var(--radius-lg);
   color: var(--color-muted);
+}
+
+.shortcuts {
+  margin: 2rem 0 0;
+  color: var(--color-muted);
+}
+
+.shortcuts a {
+  font-weight: 600;
 }
 </style>

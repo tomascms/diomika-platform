@@ -1,5 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
+// A lista do Anexo I vive com a loja (frontend-web/src/lib/fibres.js): uma só cópia, com o seu teste.
+import { nonAnnexIFibres } from '../../../frontend-web/src/lib/fibres.js'
 
 const props = defineProps({
   modelValue: { type: [Object, String], default: () => ({}) },
@@ -64,6 +66,9 @@ const totalSaved = computed(() =>
   Object.values(buildPayload()).reduce((sum, p) => sum + p, 0),
 )
 
+// Denominações que não são fibras do Anexo I do Reg. (UE) 1007/2011 (LEGAL-12): só se avisa, grava-se na mesma.
+const notFibres = computed(() => nonAnnexIFibres(rows.value.map((row) => row.material)))
+
 const sync = () => {
   syncing = true
   emit('update:modelValue', buildPayload())
@@ -106,6 +111,11 @@ const removeRow = (idx) => {
       <button v-if="!disabled" type="button" class="btn btn-danger btn-sm" @click="removeRow(idx)">X</button>
     </div>
     <button v-if="!disabled" type="button" class="btn btn-ghost btn-sm" @click="addRow">+ Adicionar material</button>
+    <p v-for="name in notFibres" :key="name" class="fibre-warning" role="status">
+      «{{ name }}» não é uma denominação de fibra do Anexo I do Regulamento (UE) n.º 1007/2011. Se o artigo é
+      têxtil, use só essas (algodão, poliéster, viscose, lã…) e escreva o tecido (veludo, malha…) na descrição.
+      Pode gravar na mesma.
+    </p>
     <p class="sum" :class="{ ok: totalSaved === 100, warn: totalSaved !== 100 }">
       Total a gravar: {{ totalSaved }}%
       <span v-if="totalUi !== totalSaved"> (a escrever: {{ totalUi }}%)</span>
@@ -122,4 +132,5 @@ const removeRow = (idx) => {
 .sum { margin: 4px 0 0; font-size: 0.8rem; }
 .sum.ok { color: var(--success); }
 .sum.warn { color: var(--danger); }
+.fibre-warning { margin: 4px 0 0; padding: 6px 10px; font-size: 0.8rem; color: var(--warning); background: var(--warning-soft); border-radius: var(--radius); }
 </style>

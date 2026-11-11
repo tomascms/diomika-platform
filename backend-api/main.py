@@ -10,6 +10,7 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from starlette.middleware.gzip import GZipMiddleware
@@ -36,7 +37,7 @@ from core.middleware import (
 )
 from core.auth_token_middleware import AdminTokenRotationMiddleware
 from core.path_guard import PrivilegedPathMiddleware
-from core.rate_limiting import RateLimitingMiddleware
+from core.validation_messages import pt_validation_errors
 from core.version import VERSION
 from routes import (
     desktop_updates,
@@ -117,7 +118,6 @@ app.add_middleware(AdminTokenRotationMiddleware)
 app.add_middleware(GlobalRateLimitMiddleware)
 app.add_middleware(BodySizeLimitMiddleware)
 app.add_middleware(BotDefenseMiddleware)
-app.add_middleware(RateLimitingMiddleware)
 app.add_middleware(LatencyAlertMiddleware)
 app.add_middleware(CatalogCacheHeadersMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
@@ -171,6 +171,12 @@ app.include_router(ops_analytics.router)
 app.include_router(desktop_updates.router)
 
 
+@app.exception_handler(RequestValidationError)
+async def _validation_error(request, exc: RequestValidationError):  # type: ignore[no-untyped-def]
+    """422 em português (FE-09), no formato de sempre e sem repetir o que o visitante escreveu."""
+    return JSONResponse(status_code=422, content={"detail": pt_validation_errors(exc.errors())})
+
+
 @app.exception_handler(Exception)
 async def _unhandled_exception(request, exc):  # type: ignore[no-untyped-def]
     """Em produção não devolve stack traces ao cliente."""
@@ -215,7 +221,7 @@ def health_check():
 @app.api_route("/health/ready", methods=["GET", "HEAD"])  # HEAD: UptimeRobot
 def health_ready():
     body = build_health(ready=True)
-    if not body.get("database"):
+    if not body.get("database") or body.get("email_worker_stale"):
         # 503 para load balancers — não é excepção de aplicação (Sentry filtra /health).
         from fastapi.responses import JSONResponse
 

@@ -57,6 +57,10 @@ const roleLabel = computed(() => ROLE_LABELS[props.user?.role] || props.user?.ro
         <AppIcon :name="item.icon || 'folder'" :size="17" />
         <span>{{ item.label }}</span>
       </RouterLink>
+      <RouterLink v-if="items.length" to="/em-falta" class="nav-item" active-class="active" @click="$emit('navigate')">
+        <AppIcon name="clipboard" :size="17" />
+        <span>Conteúdo em falta</span>
+      </RouterLink>
     </nav>
 
     <div class="sidebar-footer">

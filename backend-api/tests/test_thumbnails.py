@@ -36,7 +36,7 @@ def test_upload_writes_original_and_thumbnail(monkeypatch):
     with patch.object(storage, "get_db", return_value=db):
         storage.upload_bytes(_jpeg(), "m/a.jpg", "image/jpeg")
     paths = [c.args[0] for c in bucket.upload.call_args_list]
-    assert paths == ["m/a.jpg", "m/a.jpg.w480.webp", "m/a.jpg.w960.webp"]
+    assert paths == ["m/a.jpg", "m/a.jpg.w480.webp", "m/a.jpg.w960.webp", "m/a.jpg.w160.webp"]
 
 
 def test_large_thumbnail_width():

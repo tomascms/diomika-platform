@@ -1,17 +1,18 @@
-# Diomika Backoffice — ficheiros para o cliente
+DIOMIKA BACKOFFICE - INSTALAR
 
-Pacote limpo: 3 instaladores + credenciais + atalhos de abertura.
+Windows
+  1. Abra Diomika-Backoffice-<versão>-setup.exe.
+  2. Se aparecer «O Windows protegeu o computador»: Mais informações -> Executar mesmo assim.
+  3. A aplicação abre sozinha, sem utilizador nem palavra-passe.
 
-| SO      | Instalador                              | Como abrir              |
-|---------|-----------------------------------------|-------------------------|
-| Windows | `Diomika-Backoffice-*-windows.zip`      | `Abrir-Windows.cmd`     |
-| macOS   | `Diomika-Backoffice-*-mac.dmg`          | `Abrir-Mac.command`     |
-| Linux   | `Diomika-Backoffice-*-linux.AppImage`   | ver CREDENCIAIS.txt     |
+Mac
+  1. Abra Diomika-Backoffice-<versão>-mac.dmg e arraste «Diomika Backoffice» para Aplicações.
+  2. Abra a aplicação. Se o Mac disser que não a pode verificar: OK.
+  3. Definições do Sistema -> Privacidade e Segurança -> fim da página -> Abrir mesmo assim.
+  4. Daí em diante abre normalmente, sem palavra-passe.
 
-Credenciais: `CREDENCIAIS.secret.txt`
+IMPORTANTE
+  Quem tiver estes ficheiros entra no backoffice. Não os envie por email nem os partilhe.
+  Guarde a pen num sítio seguro ou apague os instaladores depois de instalar.
 
-Preparar pasta local:
-  node backoffice-desktop/scripts/prepare-cliente-pack.cjs
-
-Ou descarregar release + preparar:
-  python deploy/fetch_backoffice_release.py
+Versões novas: a Diomika entrega um instalador novo. Instale por cima; os dados estão no servidor.

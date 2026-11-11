@@ -1,17 +1,28 @@
 import { fileURLToPath, URL } from 'node:url'
 import path from 'node:path'
+import process from 'node:process'
 
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
+/**
+ * Para onde `npm run dev` (e o `vite preview`) encaminha `/api`, GET e POST (FE-20). Por omissão a API local
+ * (`python deploy/start_local_api.py`, porta DIOMIKA_API_PORT, 8001). Antes era a de produção, e os testes locais
+ * liam e tentavam escrever em produção. Outra API (a de produção, só para ler) pede-se de propósito, com
+ * DIOMIKA_API_ORIGIN na linha de comandos; nunca vem do `.env` da raiz, que é o de produção.
+ */
+export function devApiTarget(env = process.env) {
+  const origin = String(env.DIOMIKA_API_ORIGIN || '').trim().replace(/\/+$/, '')
+  return origin || `http://127.0.0.1:${env.DIOMIKA_API_PORT || 8001}`
+}
+
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   const rootEnv = loadEnv(mode, path.resolve(fileURLToPath(new URL('.', import.meta.url)), '..'), '')
-  // `npm run dev` fala com a API em produção por omissão (como o backoffice):
-  // antes apontava sempre para 127.0.0.1:8001 e, sem API local a correr, todos
-  // os pedidos davam «Failed to fetch». DIOMIKA_LOCAL_API=1 → API local.
-  const useLocalApi = (process.env.DIOMIKA_LOCAL_API || rootEnv.DIOMIKA_LOCAL_API) === '1'
-  const apiOrigin = (rootEnv.DIOMIKA_API_ORIGIN || 'https://api.diomika.com').replace(/\/+$/, '')
+  const apiTarget = devApiTarget()
+  if (command === 'serve' && !/^http:\/\/(127\.0\.0\.1|localhost)[:/]/.test(apiTarget)) {
+    console.warn(`[diomika] /api vai para ${apiTarget}: os formulários que enviar escrevem lá.`)
+  }
   let supabaseOrigin = ''
   try {
     if (rootEnv.VITE_SUPABASE_URL) {
@@ -30,10 +41,10 @@ export default defineConfig(({ mode }) => {
         transformIndexHtml: {
           order: 'post',
           handler(html, ctx) {
-            const hints = [
-              '<link rel="preconnect" href="https://api.diomika.com" crossorigin>',
-              '<link rel="dns-prefetch" href="https://api.diomika.com">',
-            ]
+            // No servidor de desenvolvimento não se liga a produção só por existir (FE-20).
+            if (ctx.server) return html
+            // Sem `api.diomika.com`: os GET vão para `/api` no próprio domínio e só o envio de formulários o usa (PERF-11).
+            const hints = []
             if (supabaseOrigin) {
               hints.unshift(
                 `<link rel="preconnect" href="${supabaseOrigin}" crossorigin>`,
@@ -42,7 +53,7 @@ export default defineConfig(({ mode }) => {
             }
             if (ctx.bundle) {
               for (const fileName of Object.keys(ctx.bundle)) {
-                if (/archivo-latin-wdth-normal.*\.woff2$/.test(fileName)) {
+                if (/archivo-pt.*\.woff2$/.test(fileName)) {
                   const href = fileName.startsWith('assets/') ? `/${fileName}` : `/assets/${fileName}`
                   hints.push(
                     `<link rel="preload" href="${href}" as="font" type="font/woff2" crossorigin>`,
@@ -87,7 +98,7 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       proxy: {
         '/api': {
-          target: useLocalApi ? 'http://127.0.0.1:8001' : apiOrigin,
+          target: apiTarget,
           changeOrigin: true,
           secure: true,
           rewrite: (p) => p.replace(/^\/api/, ''),

@@ -10,29 +10,51 @@
  * regras (foi esse conflito Tailwind × CSS que desformatava páginas).
  */
 
+/*
+ * Archivo variável, servida localmente (a CSP só permite fontes do próprio domínio): só os caracteres do português
+ * (Latin-1 e a pontuação comum), peso 400–800 e largura 100–125 %, que são os que o site usa. 53 KB em vez dos 90 KB do
+ * ficheiro completo (PERF-08). Gerada uma vez com fonttools (varLib.instancer + subset) a partir de
+ * @fontsource-variable/archivo@5.3.0 (files/archivo-latin-wdth-normal.woff2); quem mexer nos pesos ou larguras usados refaz-a.
+ */
+@font-face {
+  font-family: 'Archivo Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 800;
+  font-stretch: 100% 125%;
+  src: url('./fonts/archivo-pt.woff2') format('woff2-variations');
+}
+
 :root {
+  color-scheme: light;
+
   /* Marca */
   --brand-blue: #266298;
   --brand-blue-deep: #1b4a74;
   --brand-red: #dc3e38;
+  /* Faixa da marca (azul com remate vermelho, como as fitas do logótipo): cabeçalho, rodapé. */
+  --brand-stripe: linear-gradient(90deg, var(--brand-blue) 0 82%, var(--brand-red) 82% 100%);
 
   /* Tinta */
-  --color-ink: #1f272c;
+  --color-ink: #23292d;
   --color-ink-soft: #3e474b;
   --color-ink-deep: #161d21;
-  --color-muted: #5d6970;
+  --color-muted: #5f6466;
 
   /* Acção */
   --color-accent: var(--brand-blue);
   --color-accent-hover: var(--brand-blue-deep);
   --color-accent-light: #4f86b8;
-  --color-accent-soft: #e7eff7;
+  --color-accent-soft: #e9f0f7;
   --color-accent-glow: rgba(38, 98, 152, 0.22);
+  /* Fundo dos botões e etiquetas com texto branco. */
+  --color-action: var(--brand-blue);
+  --color-action-hover: var(--brand-blue-deep);
 
   /* Superfícies */
-  --color-bg: #f3f5f7;
-  --color-bg-soft: #e9edf1;
-  --color-bg-hover: #e1e6eb;
+  --color-bg: #f8f6f2; /* branco-linho: mais quente que o cinzento-azulado de antes, combina com têxteis */
+  --color-bg-soft: #f0ece5;
+  --color-bg-hover: #e8e2d9;
   --color-surface: #ffffff;
   --color-cream: var(--color-bg);
   --color-cream-dark: var(--color-bg-soft);
@@ -45,9 +67,17 @@
   --color-warning: #9a5a06;
   --color-warning-soft: #fcf1df;
 
+  /* Outras superfícies que não são `surface` nem `bg` */
+  --color-header-bg: rgba(255, 255, 255, 0.97);
+  --color-toolbar-bg: rgba(248, 246, 242, 0.96);
+  --color-chip-bg: rgba(255, 255, 255, 0.92);
+  --color-footer-bg: #e9f0f7; /* rodapé azul-claro da marca (accent-soft) */
+  --color-on-light: #161d21; /* texto sobre fundos claros fixos (botão branco do rodapé de contacto) */
+  --color-photo-bg: transparent; /* moldura das fotos */
+
   /* Linhas */
-  --color-border: #dce1e6;
-  --color-border-strong: #c2cad1;
+  --color-border: #e5dfd6;
+  --color-border-strong: #cdc5b9;
   --color-border-accent: rgba(38, 98, 152, 0.35);
 
   /* Tipografia */
@@ -157,6 +187,23 @@ a:hover {
   color: var(--color-accent-hover);
 }
 
+/* Ligações no meio do texto distinguem-se por mais do que a cor (WCAG 1.4.1, A11Y-05). */
+p a:not(.btn),
+.cookie-banner a,
+.privacy-note a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Banner de cookies à vista: espaço para o fim da página rolar acima dele, e o foco nunca fica por baixo (A11Y-01). */
+html[data-cookie-banner] {
+  scroll-padding-bottom: var(--cookie-banner-h, 0px);
+}
+
+html[data-cookie-banner] body {
+  padding-bottom: var(--cookie-banner-h, 0px);
+}
+
 img {
   max-width: 100%;
   height: auto;
@@ -211,6 +258,18 @@ textarea {
   letter-spacing: -0.02em;
 }
 
+/* Traço vermelho da marca sob os títulos (decorativo: o contraste do texto não depende dele). */
+.page-title::after,
+.section-title::after {
+  content: '';
+  display: block;
+  width: 2.75rem;
+  height: 4px;
+  margin-top: 0.55rem;
+  border-radius: 2px;
+  background: var(--brand-red);
+}
+
 .page-lead {
   max-width: 62ch;
   margin: 0 0 2rem;
@@ -244,7 +303,9 @@ textarea {
 
 .surface-card--interactive {
   cursor: pointer;
-  transition: border-color var(--transition), box-shadow var(--transition);
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition);
 }
 
 .surface-card--interactive:hover {
@@ -271,7 +332,10 @@ textarea {
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
-  transition: background var(--transition), border-color var(--transition), color var(--transition);
+  transition:
+    background var(--transition),
+    border-color var(--transition),
+    color var(--transition);
 }
 
 .btn:disabled,
@@ -282,24 +346,25 @@ textarea {
 }
 
 .btn-primary {
-  background: var(--color-accent);
+  background: var(--color-action);
   color: #fff;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--color-accent-hover);
+  background: var(--color-action-hover);
   color: #fff;
 }
 
 .btn-secondary {
   background: var(--color-surface);
-  border-color: var(--color-border-strong);
-  color: var(--color-ink);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  border-color: var(--color-ink-soft);
-  color: var(--color-ink-deep);
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent-hover);
+  color: var(--color-accent-hover);
 }
 
 .btn-ghost {
@@ -327,12 +392,12 @@ textarea {
 /* Botões sobre fundo escuro (hero) */
 .btn-hero {
   background: #fff;
-  color: var(--color-ink-deep);
+  color: var(--color-on-light);
 }
 
 .btn-hero:hover:not(:disabled) {
-  background: var(--color-accent-soft);
-  color: var(--color-ink-deep);
+  background: #e7eff7;
+  color: var(--color-on-light);
 }
 
 .btn-hero-outline {
@@ -392,8 +457,7 @@ textarea {
 .select,
 .field-input,
 .field-textarea,
-.field-select,
-.qty-select {
+.field-select {
   width: 100%;
   min-height: 44px;
   padding: 0.6rem 0.8rem;
@@ -402,14 +466,15 @@ textarea {
   background: var(--color-surface);
   color: var(--color-ink);
   font-size: 1rem;
-  transition: border-color var(--transition), box-shadow var(--transition);
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition);
 }
 
 .input:hover,
 .field-input:hover,
 .field-textarea:hover,
-.field-select:hover,
-.qty-select:hover {
+.field-select:hover {
   border-color: var(--color-muted);
 }
 
@@ -417,8 +482,7 @@ textarea {
 .select:focus,
 .field-input:focus,
 .field-textarea:focus,
-.field-select:focus,
-.qty-select:focus {
+.field-select:focus {
   outline: none;
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px var(--color-accent-glow);
@@ -432,7 +496,6 @@ textarea.input {
 }
 
 .field-select,
-.qty-select,
 select.input {
   cursor: pointer;
 }
@@ -442,10 +505,54 @@ input[type='radio'] {
   accent-color: var(--color-accent);
 }
 
+/* Campos obrigatórios («*» no rótulo) e facultativos, erro junto ao campo e grupo de opções. */
+.field-label .req {
+  margin-left: 0.15em;
+  color: var(--color-danger);
+}
+
+.field-optional {
+  font-weight: 400;
+  color: var(--color-muted);
+}
+
+.field-error {
+  margin: 0.4rem 0 0;
+  font-size: 0.875rem;
+  color: var(--color-danger);
+}
+
+.field-input[aria-invalid='true'],
+.field-textarea[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+.field-group {
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  border: 0;
+}
+
+.radio-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1rem;
+}
+
+.radio-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  cursor: pointer;
+}
+
 /* ---------- Distintivos ---------- */
 .badge-pill {
   display: inline-flex;
   align-items: center;
+  white-space: nowrap;
   padding: 0.2rem 0.6rem;
   border-radius: var(--radius-pill);
   font-size: 0.8rem;
@@ -453,7 +560,7 @@ input[type='radio'] {
 }
 
 .badge-accent {
-  background: var(--color-accent);
+  background: var(--color-action);
   color: #fff;
 }
 
@@ -480,7 +587,10 @@ input[type='radio'] {
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
-  transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .picker-chip:hover {
@@ -489,9 +599,33 @@ input[type='radio'] {
 }
 
 .picker-chip.is-active {
-  background: var(--color-accent);
+  background: var(--color-action);
   border-color: var(--color-accent);
   color: #fff;
+}
+
+/* ---------- Esqueletos ---------- */
+/* Um só, em vez de uma cópia por vista (FE-15): `.skeleton` pinta um bloco, `.sk` é uma linha de texto. */
+.skeleton,
+.sk {
+  background: linear-gradient(90deg, var(--color-bg-soft), var(--color-bg), var(--color-bg-soft));
+  background-size: 200% 100%;
+  animation: shimmer 1.3s ease-in-out infinite;
+}
+
+.sk {
+  display: block;
+  height: 12px;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* ---------- Carregamento ---------- */
@@ -514,6 +648,85 @@ input[type='radio'] {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* ---------- Tabelas dos textos legais (privacidade e cookies) ---------- */
+.legal-table {
+  width: 100%;
+  margin: 0 0 1.25rem;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.legal-table th,
+.legal-table td {
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--color-border-strong);
+  text-align: left;
+  vertical-align: top;
+  /* `anywhere` deixa domínios e nomes técnicos longos partir quando a coluna é estreita; com
+     `break-word` a tabela alargava para lá da coluna do texto (9 px a 1024 px com as fontes do Linux). */
+  overflow-wrap: anywhere;
+}
+
+.legal-table thead th {
+  background: var(--color-surface);
+  color: var(--color-ink-deep);
+}
+
+.legal-table tbody th {
+  color: var(--color-ink-deep);
+  font-weight: 650;
+}
+
+.legal-table code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+/* Em ecrãs estreitos cada linha passa a cartão, com o nome da coluna antes de cada valor. */
+@media (max-width: 720px) {
+  .legal-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .legal-table,
+  .legal-table tbody,
+  .legal-table tr,
+  .legal-table th,
+  .legal-table td {
+    display: block;
+  }
+
+  .legal-table tr {
+    margin-bottom: 1rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+  }
+
+  .legal-table th,
+  .legal-table td {
+    border: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .legal-table tr > :last-child {
+    border-bottom: 0;
+  }
+
+  .legal-table td::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--color-muted);
+    font-size: 0.9rem;
+    font-weight: 650;
   }
 }
 

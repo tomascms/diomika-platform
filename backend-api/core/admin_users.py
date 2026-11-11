@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from core import state_store
 from paths import BACKEND_ROOT
 
 logger = logging.getLogger("diomika-api")
@@ -77,6 +78,9 @@ def _empty() -> dict[str, Any]:
 
 
 def _load() -> dict[str, Any]:
+    if state_store._supabase():
+        data = state_store.load("admin_users", _empty())
+        return data if isinstance(data, dict) and isinstance(data.get("users"), list) else _empty()
     if not _STORE.is_file():
         return _empty()
     try:
@@ -89,6 +93,9 @@ def _load() -> dict[str, Any]:
 
 
 def _save(data: dict[str, Any]) -> None:
+    if state_store._supabase():
+        state_store.save("admin_users", data)
+        return
     _STORE.parent.mkdir(parents=True, exist_ok=True)
     payload = json.dumps(data, indent=2, ensure_ascii=False)
     # Backup rotativo antes de escrever
@@ -247,8 +254,13 @@ def authenticate(
     password: str,
     *,
     totp_code: str | None = None,
+    enrolling: bool = False,
 ) -> tuple[dict[str, Any] | None, str | None]:
-    """Devolve (user_public, erro). user_public sem hash."""
+    """Devolve (user_public, erro). user_public sem hash.
+
+    `enrolling`: só confere a password (com o mesmo bloqueio por tentativas) e salta o passo do TOTP.
+    Usado por /mfa/setup e /mfa/confirm, que não podem ser um oráculo de passwords sem bloqueio (SEG-03).
+    """
     username = (username or "").strip()
     if not username or not password:
         return None, "Credenciais inválidas"
@@ -289,11 +301,22 @@ def authenticate(
             return None, f"Credenciais inválidas ({left} tentativas restantes)"
 
         secret = _get_str(user, "totp_secret").strip()
-        if mfa_required_globally():
+        if mfa_required_globally() and not enrolling:
             if secret:
                 if not totp_code:
                     return None, "mfa_required"
                 if not _totp_ok(secret, totp_code):
+                    # Um código errado conta como senha errada: sem isto, quem sabe a senha adivinha o TOTP só
+                    # com o limite por minuto (revisão final, Minor 1).
+                    fails = int(user.get("failed_attempts") or 0) + 1
+                    user["failed_attempts"] = fails
+                    if fails >= MAX_FAILED:
+                        user["locked_until"] = (now + timedelta(minutes=LOCKOUT_MINUTES)).isoformat()
+                        user["failed_attempts"] = 0
+                    data["users"][idx] = user
+                    _save(data)
+                    if fails >= MAX_FAILED:
+                        return None, f"Demasiadas falhas. Conta bloqueada {LOCKOUT_MINUTES} min."
                     return None, "Código MFA inválido"
             else:
                 return None, "mfa_setup_required"

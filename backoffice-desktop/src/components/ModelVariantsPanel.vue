@@ -1,7 +1,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import { api } from '@/lib/api'
-import { mapPool } from '@/lib/pool'
+import { variantItems } from '@/lib/bundle'
 
 const props = defineProps({
   modelId: { type: String, default: null },
@@ -80,67 +80,40 @@ watch(() => [props.modelId, props.productTable], load, { immediate: true })
 
 const addRow = () => rows.value.push(emptyRow())
 
-const removeRow = async (idx) => {
+// Tirar um produto da lista só o apaga ao gravar (dentro do mesmo pedido atómico do modelo).
+let removed = []
+const removeRow = (idx) => {
   const row = rows.value[idx]
-  if (row.id && !confirm('Eliminar este produto (EAN)?')) return
-  if (row.id && props.productTable) {
-    try {
-      await api.deleteRecord(props.productTable, row.id, true)
-      saved.delete(row.id)
-    } catch (e) {
-      error.value = e.message
-      return
-    }
-  }
+  if (row.id && !confirm('Eliminar este produto (EAN)? Sai da loja quando gravar o modelo.')) return
+  if (row.id && saved.has(row.id)) removed.push(row.id)
   rows.value.splice(idx, 1)
   if (!rows.value.length && !props.readOnly) rows.value.push(emptyRow())
 }
 
 /**
- * Grava os EAN com a visibilidade `visible` (a do modelo depois de gravar).
- * Só cria/actualiza linhas novas ou alteradas; no fim remove do servidor EAN que já não estão na lista.
+ * Prepara os produtos para o pedido do modelo (não grava): valida e devolve `{ items, deleteIds }`.
+ * Depois de o pedido ter sucesso, `commit()` marca-os como gravados.
  */
-const save = async (modelId, { visible = false, requireRows = false } = {}) => {
-  if (props.readOnly || !modelId || !props.productTable) return
+const collect = ({ visible = false, requireRows = false } = {}) => {
+  if (props.readOnly || !props.productTable) return { items: [], deleteIds: [] }
   error.value = ''
-  const toSave = rows.value.filter((row) => String(row.ean || '').trim())
-  if (requireRows && !toSave.length) {
-    throw new Error('Adicione pelo menos um produto (EAN) antes de publicar na loja.')
-  }
-
-  for (const row of toSave) {
-    if (!/^\d{13}$/.test(String(row.ean).trim())) {
-      throw new Error(`EAN «${row.ean}» inválido — tem de ter 13 dígitos.`)
-    }
-    if (extraField.value?.required && !String(row.extra || '').trim()) {
-      throw new Error(`EAN ${row.ean}: indique ${extraField.value.label.toLowerCase()}.`)
-    }
-  }
-
-  const dirty = toSave.filter((row) => !row.id || saved.get(row.id) !== contentKey(row, visible))
-  await mapPool(dirty, 4, async (row) => {
-    const payload = {
-      id_modelo: modelId,
-      ean: String(row.ean).trim(),
-      attributes: extraField.value ? { [extraField.value.name]: row.extra } : {},
-      visibilidade: visible,
-    }
-    if (row.id) {
-      await api.updateRecord(props.productTable, row.id, { ...payload, id: row.id })
-    } else {
-      const created = await api.createRecord(props.productTable, payload)
-      row.id = created.id
-    }
-    row.vis = visible
-    saved.set(row.id, contentKey(row, visible))
+  const items = variantItems(rows.value, {
+    extraField: extraField.value,
+    visible,
+    requireRows,
+    newId: () => crypto.randomUUID(),
   })
+  const withEan = rows.value.filter((row) => String(row.ean || '').trim())
+  items.forEach((item, i) => {
+    withEan[i].id = item.id // `items` sai pela mesma ordem das linhas com EAN
+  })
+  return { items, deleteIds: [...removed] }
+}
 
-  // Uma só leitura: limpa duplicados de tentativas anteriores e recarrega a lista.
-  const keptIds = new Set(toSave.map((r) => r.id))
-  const existing = await api.listRecords(props.productTable, { id_modelo: modelId, limit: '100' })
-  const orphans = existing.filter((p) => !keptIds.has(p.id))
-  await mapPool(orphans, 4, (p) => api.deleteRecord(props.productTable, p.id, true))
-  setRows(existing.filter((p) => keptIds.has(p.id)))
+const commit = (visible) => {
+  removed = []
+  saved = new Map(rows.value.filter((r) => r.id).map((r) => [r.id, contentKey(r, visible)]))
+  for (const row of rows.value) row.vis = visible
 }
 
 const eanPlaceholder = computed(() => 'ex: 5600000000013')
@@ -148,16 +121,14 @@ const eanPlaceholder = computed(() => 'ex: 5600000000013')
 /** EAN gravados (para o aviso «Para aparecer na loja»). */
 const savedWithEan = computed(() => rows.value.filter((r) => r.id && String(r.ean || '').trim()).length)
 
-defineExpose({ save, savedWithEan })
+defineExpose({ collect, commit, savedWithEan })
 </script>
 
 <template>
   <section class="variants-panel">
     <h3>Produtos (EAN)</h3>
     <p class="hint">
-      Obrigatório para aparecer na loja: pelo menos um produto com EAN
-      <template v-if="extraField"> e {{ extraField.label.toLowerCase() }}</template>.
-      Já não é preciso sair desta página para os criar à parte.
+      Pelo menos um produto com EAN<template v-if="extraField"> e {{ extraField.label.toLowerCase() }}</template>.
     </p>
     <p v-if="loading" class="muted">A carregar produtos…</p>
     <p v-if="error" class="err">{{ error }}</p>

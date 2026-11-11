@@ -1,0 +1,9 @@
+{
+  "id": "d4037b3a-64aa-4a02-86f3-ecce8b4cc6e7",
+  "nome": "Guarda-Chuva",
+  "slug": "guarda-chuvas",
+  "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/categories/imagem/c84c6ddc2fb84121b2546686167b7594.png",
+  "tipo_catalogo": "guarda_chuva",
+  "carrinho_step": 12,
+  "carrinho_min": 12
+}

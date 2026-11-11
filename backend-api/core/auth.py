@@ -93,6 +93,11 @@ def require_api_key(
             raise HTTPException(status_code=401, detail="Sessão com role inválido")
         return _attach(request, role=role, actor=str(sess["username"]))  # type: ignore[arg-type]
 
+    from core.local_only import desktop_autologin_ok
+
+    if desktop_autologin_ok(request):
+        return _attach(request, role="admin", actor="backoffice")
+
     if not settings.api_key_required:
         return _attach(request, role="admin", actor="dev-open")
 

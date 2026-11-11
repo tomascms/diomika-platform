@@ -41,6 +41,13 @@ async def process_event(event: dict) -> None:
             )
             if not ok:
                 raise RuntimeError("SMTP falhou")
+            message_id = payload.get("message_id")
+            if message_id:  # a saga deixou «Email pendente»: com o email enviado volta a «Nova» (API-13)
+                from core.database import get_db
+
+                get_db().table("contact_messages").update({"status": "Nova"}).eq("id", message_id).eq(
+                    "status", "Email pendente"
+                ).execute()
             mark_done(event_id)
             logger.info("Outbox %s processado", event_id[:8])
         elif event_type == "orcamento_notification":

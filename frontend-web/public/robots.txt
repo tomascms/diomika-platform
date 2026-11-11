@@ -1,18 +1,8 @@
 User-agent: *
 Allow: /
 Disallow: /carrinho
+Disallow: /pedido-rapido
+Disallow: /catalogo-imprimir
 Disallow: /api/
-Disallow: /admin
-Disallow: *.json$
-Disallow: *.xml$
 
-User-agent: AdsBot-Google
-Disallow:
-
-User-agent: Googlebot-Image
-Allow: /
-
-Crawl-delay: 1
-User-agent: *
-
-Sitemap: /sitemap.xml
+Sitemap: https://www.diomika.com/sitemap.xml

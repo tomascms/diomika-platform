@@ -2,6 +2,7 @@
 import { ref, watch, computed } from 'vue'
 import { api } from '@/lib/api'
 import { mapPool } from '@/lib/pool'
+import { colorItems } from '@/lib/bundle'
 import ImageField from '@/components/ImageField.vue'
 
 const props = defineProps({
@@ -65,18 +66,12 @@ const addRow = () => {
   rows.value.push(emptyRow())
 }
 
-const removeRow = async (idx) => {
+// Tirar uma cor da lista só a apaga ao gravar (dentro do mesmo pedido atómico do modelo).
+let removed = []
+const removeRow = (idx) => {
   const row = rows.value[idx]
-  if (row.id && !confirm('Eliminar esta cor?')) return
-  if (row.id && props.colorsTable) {
-    try {
-      await api.deleteRecord(props.colorsTable, row.id, true)
-      saved.delete(row.id)
-    } catch (e) {
-      error.value = e.message
-      return
-    }
-  }
+  if (row.id && !confirm('Eliminar esta cor? Sai da loja quando gravar o modelo.')) return
+  if (row.id && saved.has(row.id)) removed.push(row.id)
   rows.value.splice(idx, 1)
   if (!rows.value.length && !props.readOnly) rows.value.push(emptyRow())
 }
@@ -86,68 +81,45 @@ const onImageFile = (row, file) => {
 }
 
 /**
- * Grava as cores com a visibilidade `visible` (a do modelo depois de gravar).
- * Só cria/actualiza linhas novas ou alteradas; no fim remove do servidor cores que já não estão na lista.
+ * Prepara as cores para o pedido do modelo (não grava): envia as imagens escolhidas, valida e devolve
+ * `{ items, deleteIds }`. Depois de o pedido ter sucesso, `commit()` marca-as como gravadas.
  */
-const save = async (modelId, { visible = false, requireRows = false } = {}) => {
-  if (props.readOnly || !modelId || !props.colorsTable) return
+const collect = async ({ visible = false, requireRows = false } = {}) => {
+  if (props.readOnly || !props.colorsTable) return { items: [], deleteIds: [] }
   error.value = ''
-  const toSave = rows.value.filter((row) => String(row.numero || '').trim())
-  if (requireRows && !toSave.length) {
-    throw new Error('Adicione pelo menos uma cor (número + imagem) antes de publicar na loja.')
-  }
-
-  await mapPool(toSave, 4, async (row) => {
+  const withNumber = rows.value.filter((row) => String(row.numero || '').trim())
+  await mapPool(withNumber, 4, async (row) => {
     if (row.pendingFile) {
       const up = await api.uploadImage(props.colorsTable, 'imagem', row.pendingFile)
       row.imagem = up.url
       row.pendingFile = null
     }
   })
-
-  for (const row of toSave) {
-    if (!row.imagem) throw new Error(`Cor nº ${String(row.numero).trim()}: escolha uma imagem.`)
-  }
-
-  const dirty = toSave.filter((row) => !row.id || saved.get(row.id) !== contentKey(row, visible))
-  await mapPool(dirty, 4, async (row) => {
-    const payload = {
-      id_modelo: modelId,
-      numero: parseInt(String(row.numero).trim(), 10),
-      nome: (row.nome || '').trim(),
-      imagem: row.imagem,
-      visibilidade: visible,
-    }
-    if (row.id) {
-      await api.updateRecord(props.colorsTable, row.id, { ...payload, id: row.id })
-    } else {
-      const created = await api.createRecord(props.colorsTable, payload)
-      row.id = created.id
-    }
-    row.vis = visible
-    saved.set(row.id, contentKey(row, visible))
+  const items = colorItems(rows.value, { visible, requireRows, newId: () => crypto.randomUUID() })
+  // Os ids das linhas novas ficam já na linha: se o pedido falhar e o utilizador repetir, é o mesmo id.
+  items.forEach((item, i) => {
+    withNumber[i].id = item.id // `items` sai pela mesma ordem das linhas com número
   })
+  return { items, deleteIds: [...removed] }
+}
 
-  // Uma só leitura: limpa duplicados de tentativas anteriores e recarrega a lista.
-  const keptIds = new Set(toSave.map((r) => r.id))
-  const existing = await api.listModelColors(props.colorsTable, modelId)
-  const orphans = existing.filter((c) => !keptIds.has(c.id))
-  await mapPool(orphans, 4, (c) => api.deleteRecord(props.colorsTable, c.id, true))
-  setRows(existing.filter((c) => keptIds.has(c.id)))
+const commit = (visible) => {
+  removed = []
+  saved = new Map(rows.value.filter((r) => r.id).map((r) => [r.id, contentKey(r, visible)]))
+  for (const row of rows.value) row.vis = visible
 }
 
 /** Cores gravadas com imagem (para o aviso «Para aparecer na loja»). */
 const savedWithImage = computed(() => rows.value.filter((r) => r.id && r.imagem).length)
 
-defineExpose({ save, savedWithImage })
+defineExpose({ collect, commit, savedWithImage })
 </script>
 
 <template>
   <section class="colors-panel">
     <h3>Cores do modelo</h3>
     <p class="hint">
-      Obrigatório para aparecer na loja: pelo menos uma cor com número e imagem.
-      Os produtos (EAN/dimensões) só entram no site depois disto e de «Publicar na loja».
+      Pelo menos uma cor com número e imagem.
     </p>
     <p v-if="loading" class="muted">A carregar cores…</p>
     <p v-if="error" class="err">{{ error }}</p>

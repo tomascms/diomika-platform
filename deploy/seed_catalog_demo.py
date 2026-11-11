@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
 Garante categorias em falta e produtos de demonstração no esquema de catálogo
-unificado (product_models/product_variants/product_model_colors — ver
-db/RUNBOOK_unified_catalog_migration.md).
+unificado (product_models/product_variants/product_model_colors).
 
-Uso (na raiz do repo, DEPOIS de aplicar 0001/0002 — ver RUNBOOK):
+Uso (na raiz do repo):
   python deploy/seed_catalog_demo.py
 
 """

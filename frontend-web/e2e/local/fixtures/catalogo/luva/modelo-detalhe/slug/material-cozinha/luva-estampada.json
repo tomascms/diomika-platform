@@ -1,0 +1,63 @@
+{
+  "composicao": {
+    "Poliéster": 100
+  },
+  "id": "0c8f7f2e-480c-419f-954d-b77c0018cd8f",
+  "id_categoria": "1b6f633e-3ade-4984-939f-32fecb7867af",
+  "tipo_catalogo": "luva",
+  "nome": "Luva Estampada",
+  "slug": "luva-estampada",
+  "descricao": "Sem descrição",
+  "attributes": {
+    "composicao": {
+      "Poliéster": 100
+    }
+  },
+  "visibilidade": true,
+  "created_at": "2026-08-28T11:23:10.78824+00:00",
+  "updated_at": "2026-10-03T16:21:04.026043+00:00",
+  "categories": {
+    "id": "1b6f633e-3ade-4984-939f-32fecb7867af",
+    "nome": "Material de Cozinha",
+    "carrinho_step": 12,
+    "carrinho_min": 12,
+    "slug": "material-cozinha",
+    "tipo_catalogo": "material_cozinha"
+  },
+  "product_variants": {
+    "id": "31c07cde-bbfc-4a93-a66c-6f38bd34a7c1",
+    "ean": "5606044501197",
+    "id_modelo": "0c8f7f2e-480c-419f-954d-b77c0018cd8f",
+    "attributes": {},
+    "created_at": "2026-08-28T11:25:07.17046+00:00",
+    "updated_at": "2026-10-03T16:21:04.221828+00:00",
+    "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044501197.png?token=expirado",
+    "visibilidade": true,
+    "tipo_catalogo": "luva"
+  },
+  "modelo_cores": [
+    {
+      "id_modelo": "0c8f7f2e-480c-419f-954d-b77c0018cd8f",
+      "numero": 1,
+      "nome": "Sortido",
+      "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_luva_cores/imagem/507d45aeb8714553a4650c3a2040617e.png",
+      "visibilidade": true
+    }
+  ],
+  "_tipo_catalogo": "luva",
+  "_storefront": {
+    "mode": "unico",
+    "product_table": "product_variants",
+    "picker": null,
+    "specs": [
+      {
+        "field": "composicao",
+        "label": "Composição (%) — igual para todas as cores",
+        "widget": "composition",
+        "enum_labels": {}
+      }
+    ],
+    "badge": null
+  },
+  "_storefront_mode": "unico"
+}

@@ -14,7 +14,9 @@ from typing import Dict, List
 def generate_slug(text: str) -> str:
     normalized = unicodedata.normalize("NFD", str(text or "").lower().strip())
     ascii_text = "".join(ch for ch in normalized if unicodedata.category(ch) != "Mn")
-    return re.sub(r"[-\s]+", "-", re.sub(r"[^\w\s-]", "", ascii_text)).strip("-")
+    # Só a-z0-9 e «-» (a BD tem um CHECK com isto, BD-11): `\w` deixava passar «_» e letras não latinas.
+    slug = re.sub(r"[-\s]+", "-", re.sub(r"[^a-z0-9\s-]", "", ascii_text)).strip("-")
+    return slug or "item"
 
 
 def validate_ean(v: str) -> str:

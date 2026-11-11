@@ -1,0 +1,9 @@
+# Vigia da API (Cloudflare Workers, plano grátis): mantém o Render acordado e avisa se a API cair.
+# Publicar: npx wrangler@4 deploy (CLOUDFLARE_API_TOKEN = CLOUDFLARE_PAGES_API_TOKEN do .env).
+name = "diomika-vigia"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+workers_dev = false
+
+[triggers]
+crons = ["*/10 * * * *"]

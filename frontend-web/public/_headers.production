@@ -1,10 +1,14 @@
+# Os ficheiros estáticos (/assets/*, /brand/*, ícones…) não passam pelas Functions (public/_routes.json): levam
+# estes cabeçalhos. As páginas passam pelo middleware (functions/_middleware.js), que põe os mesmos valores nos
+# cabeçalhos de segurança; functions-test/config.test.js garante que continuam iguais.
 /*
   ! Access-Control-Allow-Origin
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
+  X-XSS-Protection: 0
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: camera=(), microphone=(), geolocation=()
-  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Resource-Policy: same-site
   Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; script-src-elem 'self' https://challenges.cloudflare.com; connect-src 'self' https://your-project-ref.supabase.co https://challenges.cloudflare.com https://api.diomika.com https://*.i.posthog.com; img-src 'self' data: blob: https://your-project-ref.supabase.co; style-src 'self'; frame-src https://challenges.cloudflare.com; font-src 'self' data:; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests

@@ -2,6 +2,7 @@
 """Apaga/anonimiza PII por email — direito ao apagamento (RGPD)."""
 from __future__ import annotations
 
+import hashlib
 import logging
 from typing import Any
 
@@ -28,6 +29,25 @@ class EraseBody(BaseModel):
     confirm: str = Field(..., description="Escrever ERASE para confirmar")
 
 
+def _like_literal(value: str) -> str:
+    """Valor sem curingas para o ilike: a barra, o % e o _ ficam escapados."""
+    return value.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+
+
+def _erase_rows(db, table: str, col: str, email: str) -> int:
+    """Apaga as linhas cujo `lower(email)` é igual: endereços guardados com maiúsculas também (LEGAL-09).
+
+    O PostgREST não filtra por lower(coluna): o ilike apanha os candidatos e a igualdade exacta decide, para um
+    curinga (`*` é um no ilike do PostgREST) nunca apagar dados de outra pessoa.
+    """
+    rows = db.table(table).select(f"id,{col}").ilike(col, _like_literal(email)).execute().data or []
+    ids = [r["id"] for r in rows if str(r.get(col) or "").strip().lower() == email]
+    if not ids:
+        return 0
+    res = db.table(table).delete().in_("id", ids).execute()
+    return len(res.data or [])
+
+
 @router.post("/erase")
 def erase_by_email(body: EraseBody, request: Request, role: Role = Depends(require_admin)) -> dict[str, Any]:
     """Apaga mensagens/pedidos associados a um email (só role admin)."""
@@ -43,8 +63,7 @@ def erase_by_email(body: EraseBody, request: Request, role: Role = Depends(requi
         ("pedidos_orcamento", "email"),
     ):
         try:
-            res = db.table(table).delete().eq(col, email).execute()
-            counts[table] = len(res.data or [])
+            counts[table] = _erase_rows(db, table, col, email)
         except Exception as exc:
             logger.warning("erase %s: %s", table, exc)
             counts[table] = -1
@@ -55,6 +74,7 @@ def erase_by_email(body: EraseBody, request: Request, role: Role = Depends(requi
         actor=str(getattr(request.state, "api_actor", "")),
         client_ip=get_client_ip(request),
         request_id=getattr(request.state, "request_id", None),
-        detail={"email": email, "counts": counts},
+        # Só o resumo: o email que se pediu para apagar não pode ficar um ano no registo de auditoria (SEG-18).
+        detail={"email_sha256": hashlib.sha256(email.encode("utf-8")).hexdigest(), "counts": counts},
     )
     return {"ok": True, "email": email, "deleted": counts}

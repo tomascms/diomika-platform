@@ -11,6 +11,7 @@ def client(tmp_path, monkeypatch):
     from routes import desktop_updates
 
     (tmp_path / "latest.yml").write_text("version: 1.2.0\n", encoding="utf-8")
+    (tmp_path / "latest.yml.sig").write_text("assinatura", encoding="ascii")
     (tmp_path / "Diomika-Backoffice-1.2.0-setup.exe").write_bytes(b"MZ" + b"\0" * 4096)
     (tmp_path.parent / "secret.txt").write_text("nao", encoding="utf-8")
     monkeypatch.setattr(desktop_updates, "UPDATES_DIR", tmp_path)
@@ -24,6 +25,12 @@ def test_manifest_is_served_uncached(client):
     resp = client.get("/system/desktop-updates/latest.yml", headers=UA)
     assert resp.status_code == 200
     assert resp.text.startswith("version: 1.2.0")
+    assert resp.headers["cache-control"] == "no-cache"
+
+
+def test_signature_is_served_uncached_next_to_its_manifest(client):
+    resp = client.get("/system/desktop-updates/latest.yml.sig", headers=UA)
+    assert resp.status_code == 200 and resp.text.strip() == "assinatura"
     assert resp.headers["cache-control"] == "no-cache"
 
 

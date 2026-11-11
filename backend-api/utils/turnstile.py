@@ -64,6 +64,24 @@ def verify_turnstile(token: str | None, remote_ip: str | None = None) -> None:
     raise ValueError("Verificação anti-spam inválida")
 
 
+_DEFAULT_HOSTNAMES = "www.diomika.com,diomika-loja.pages.dev"
+
+
+def _allowed_hostnames() -> set[str]:
+    raw = os.getenv("TURNSTILE_ALLOWED_HOSTNAMES") or _DEFAULT_HOSTNAMES
+    return {h.strip().lower() for h in raw.split(",") if h.strip()}
+
+
+def _hostname_ok(secret: str, result: dict) -> bool:
+    """O widget de produção também aceita localhost: só vale um token gerado numa página nossa (SEG-14).
+
+    As chaves de teste da Cloudflare devolvem sempre `example.com`, por isso ficam de fora (dev/beta).
+    """
+    if secret == _TURNSTILE_TEST_SECRET or not get_settings().is_production:
+        return True
+    return str(result.get("hostname") or "").lower() in _allowed_hostnames()
+
+
 def _siteverify(secret: str, token: str, remote_ip: str | None) -> bool:
     payload = {"secret": secret, "response": token}
     if remote_ip:
@@ -79,7 +97,8 @@ def _siteverify(secret: str, token: str, remote_ip: str | None) -> bool:
     except requests.RequestException as exc:
         raise ValueError("Verificação anti-spam indisponível") from exc
 
-    return bool(resp.json().get("success"))
+    result = resp.json()
+    return bool(result.get("success")) and _hostname_ok(secret, result)
 
 
 async def verify_turnstile_async(token: str | None, remote_ip: str | None = None) -> None:

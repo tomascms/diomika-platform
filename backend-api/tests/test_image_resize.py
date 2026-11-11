@@ -34,13 +34,13 @@ def test_small_jpeg_is_not_upscaled():
     assert img.size == (400, 300)
 
 
-def test_gif_is_left_untouched():
+def test_gif_keeps_its_size_and_content():
     img = Image.new("RGB", (2000, 2000), color=(0, 0, 0))
     buf = io.BytesIO()
     img.save(buf, format="GIF")
     data = buf.getvalue()
     out = optimize_for_web(data, "anim.gif")
-    assert out == data
+    assert Image.open(io.BytesIO(out)).size == (2000, 2000)  # re-encodado, sem redimensionar (SEG-19)
 
 
 def test_png_with_transparency_keeps_alpha():
@@ -54,11 +54,11 @@ def test_png_with_transparency_keeps_alpha():
     assert max(result.size) <= 1600
 
 
-def test_never_returns_larger_than_input():
-    """Garante a regra 'nunca piorar' mesmo em imagens já pequenas/compactas."""
+def test_small_compact_image_is_still_reencoded_and_valid():
+    """SEG-19: recomprime sempre (é isso que tira EXIF/GPS), mesmo que o resultado não encolha."""
     data = _make_jpeg(100, 100, quality=40)
     out = optimize_for_web(data, "tiny.jpg")
-    assert len(out) <= len(data)
+    assert Image.open(io.BytesIO(out)).size == (100, 100)
 
 
 def test_corrupt_data_falls_back_to_original_bytes():

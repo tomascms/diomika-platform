@@ -100,6 +100,8 @@ FIELD_LABELS_PT = {
     "mensagem": "Mensagem",
     "telefone": "Telefone",
     "empresa": "Empresa",
+    "nif": "NIF",
+    "localidade": "Localidade",
     "email": "Email",
     "quantidade": "Quantidade",
     "preco": "Preço",

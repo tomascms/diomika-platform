@@ -14,7 +14,6 @@ def main() -> int:
     admin_users = (ROOT / "backend-api" / "core" / "admin_users.py").read_text(encoding="utf-8")
     required_config = [
         "REDIS_URL",
-        "SUPABASE_STORAGE_PRIVATE",
         "ADMIN_ALLOW_REMOTE",
         "DIOMIKA_SSL_INSECURE",
         "is_beta",

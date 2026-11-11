@@ -246,6 +246,8 @@ export const api = {
     request('POST', '/admin/auth/login', {
       body: totp_code ? { username, password, totp_code } : { username, password },
     }),
+  // Entrada sem palavra-passe (o servidor só aceita com ADMIN_DESKTOP_AUTOLOGIN=1 e o gate do instalador).
+  desktopLogin: () => request('POST', '/admin/auth/desktop'),
   mfaSetup: (username, password) =>
     request('POST', '/admin/auth/mfa/setup', { body: { username, password } }),
   mfaConfirm: (username, password, totp_code) =>
@@ -352,6 +354,8 @@ export const api = {
     }
     return request('POST', `/admin/crud/${table}`, opts)
   },
+  // Modelo + cores + EAN numa só transacção (API-08): ou fica tudo gravado ou nada.
+  saveBundle: (table, body) => request('POST', `/admin/crud/${encodeURIComponent(table)}/bundle`, { body }),
   updateRecord: (table, id, body) => request('PUT', `/admin/crud/${table}/${id}`, { body }),
   deleteRecord: (table, id, hard = false) =>
     request('DELETE', `/admin/crud/${table}/${id}`, { params: { hard: String(hard) } }),
@@ -377,6 +381,8 @@ export const api = {
     const data = await request('GET', '/contacto', { params: { limit: '200', offset: '0' } })
     return Array.isArray(data) ? data : data?.items || []
   },
+  quoteManagement: (id, body) => request('PATCH', `/admin/crud/pedidos_orcamento/${id}/gestao`, { body }),
+  missingContent: () => request('GET', '/admin/conteudo-em-falta'),
   getContactMessage: (id) => request('GET', `/contacto/${id}`),
   markContactRead: (id, lida = true) => request('PATCH', `/contacto/${id}/lida?lida=${lida}`),
   listCategories: () => request('GET', '/categorias'),

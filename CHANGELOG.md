@@ -3,6 +3,45 @@
 Versão única do ecossistema em `backend-api/core/version.py`. Backoffice com versão própria
 em `backoffice-desktop/package.json`.
 
+## Backoffice 1.5.12 — 2026-11-11
+
+- Regional: em «Novo registo» escolhe-se a subcategoria (avental, luva, pega, pano, toalha, protetor) antes de abrir o formulário, como no Material de Cozinha.
+- Formulário do modelo: o campo «Incremento» e as dimensões (Regional) aparecem; estavam escondidos por serem opcionais.
+
+## Backoffice 1.5.11 — 2026-11-10
+- Etiqueta: a etiqueta inteira é agora uma só imagem a 300 DPI do tamanho da área imprimível da fita de 29 mm (QR da loja, logo, legenda em uma ou duas linhas, EAN-13, QR do produto e «Fabricado em …»). Antes o logo saía quatro vezes maior e os QR cresciam com o link e saíam da fita.
+- Modelos: campo «Incremento» (é também a quantidade mínima) em todas as famílias; vazio fica o da categoria. A loja, a API e as encomendas internas usam-no.
+- Aviso de privacidade: o servidor é o Render (Frankfurt) e as cópias de segurança ficam 14 dias no GitHub.
+
+## Backoffice 1.5.10 — 2026-11-10
+- Etiquetas: o QR do produto leva o EAN (`?ean=`) e a loja abre já na dimensão da etiqueta, não na primeira.
+
+## Backoffice 1.5.9 — 2026-11-10
+- Etiquetas: saem sempre com o aspeto que o cliente acertou no P-touch Editor (QR da loja em cima, logo, «categoria - modelo - dimensão», EAN, QR do produto e «Fabricado em …»). Só os dados mudam.
+
+## Backoffice 1.5.6 — 2026-11-09
+- Modelo novo volta a pedir as cores: «Criar modelo» exige pelo menos uma cor com número e imagem. Os produtos (EAN) acrescentam-se depois, em Produtos.
+
+## Backoffice 1.5.2 — 2026-11-06
+- Formulários só com os campos obrigatórios e a descrição. Fabricante, cuidados, origem e outros extras escrevem-se na descrição.
+
+## Backoffice 1.5.1 — 2026-11-03
+- Formulários só com o obrigatório à vista; os opcionais ficam em «Mostrar campos opcionais (N)», valores mantidos.
+- Categoria nova pede só nome, imagem e família. Textos de ajuda mais curtos.
+- Lista de encomendas dava erro 500 (pedia a coluna `nome`, que não existe).
+
+## Backoffice 1.5.0 — 2026-11-03
+- Entra sem palavra-passe: `ADMIN_DESKTOP_AUTOLOGIN=1` + gate do instalador (ver runbook). API no Render (plano free);
+  sem actualizações automáticas, instala-se à mão.
+
+## Backoffice 1.4.0 — 2026-11-02 (auditoria total de 2026-10-28)
+- Orçamentos: estado (Nova → Em análise → Proposta enviada → Ganho/Perdido/Arquivado), valor da proposta, nota interna,
+  data da venda (poupada pela retenção), linhas com nome/medida/cor, origem do pedido, modelos de resposta
+  «Proposta a particular» e «Confirmação de encomenda»; o alternar lida/não lida volta a funcionar (RP-06, RP-10, LEGAL-01).
+- Modelo + cores + EAN gravam num só pedido atómico (API-08); vista «Conteúdo em falta» e avisos de resolução/proporção das fotos (RP-11).
+- Electron 44.10.1 (SEG-10); origem da janela e `Host` do servidor local verificados (SEG-15); actualizações só se instalam com o
+  manifesto assinado em Ed25519 (SEG-16). Migração `db/migrations/2026-11-03_quote_lifecycle.sql` antes do release.
+
 ## Backoffice 1.3.0 — 2026-10-23 (auditoria: [docs/auditoria-backoffice.md](docs/auditoria-backoffice.md))
 - «Guardar» num produto publicado já não o tira da loja; «Publicar» já não o esconde durante a gravação.
 - Mensagens, pedidos e encomendas actualizam-se sozinhos; listas não mostram dados antigos depois de editar.

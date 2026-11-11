@@ -75,7 +75,7 @@ def storefront_specs_for_model(tipo: str, picker: dict | None = None, badge: dic
     badge_field = badge.get("field") if badge else None
     specs: list[dict] = []
     for name, desc in _model_attrs(tipo).items():
-        if desc.get("hidden") or name in (picker_field, badge_field):
+        if desc.get("hidden") or desc.get("storefront_hidden") or name in (picker_field, badge_field):
             continue
         if desc["type"] == "string_list":
             continue  # já representado pelo picker, quando aplicável

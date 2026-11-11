@@ -58,6 +58,13 @@ const syncFiles = () => emit('pending-files', { ...pendingFiles.value })
 
 const relationOptions = (field) => props.relations[field.relation] || []
 
+// Só o obrigatório e a descrição (pedido do dono): o resto (fabricante, cuidados, origem…) escreve-se na
+// descrição (mostram-se também o incremento, que é a quantidade mínima, e as dimensões, que o Regional pede para
+// pano, toalha e protetor). Valores já gravados mantêm-se no registo (local guarda todos os campos) e voltam a ser enviados.
+const shownFields = computed(() =>
+  props.fields.filter((f) => f.required || f.readonly || ['descricao', 'incremento', 'dimensoes'].includes(f.name)),
+)
+
 
 
 const isLocked = (field) => {
@@ -264,7 +271,7 @@ defineExpose({ validate })
 
   <form class="schema-form" @submit.prevent>
 
-    <div v-for="field in fields" :key="field.name" class="field" :class="{ 'has-error': fieldErrors[field.name] }">
+    <div v-for="field in shownFields" :key="field.name" class="field" :class="{ 'has-error': fieldErrors[field.name] }">
 
       <label :for="field.name">
         {{ field.label }}<span v-if="field.required" class="req"> *</span>

@@ -75,7 +75,6 @@ useAutoRefresh(() => load({ soft: true }), 60000)
   <div class="contact-layout">
     <div class="list-pane">
       <h2>Mensagens de contacto</h2>
-      <p class="hint">As respostas são enviadas a partir do seu programa de email.</p>
       <p v-if="message" class="ok">{{ message }}</p>
       <p v-if="error" class="err">{{ error }}</p>
       <DataList

@@ -3,13 +3,24 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
+import ErrorState from '@/components/ErrorState.vue'
 import SoftImage from '@/components/SoftImage.vue'
 import { useCatalog } from '@/composables/useCatalog'
 import { useCategories } from '@/composables/useCategories'
-import { watchDynamicTitle } from '@/composables/usePageMeta'
-import { apiGet } from '@/lib/api'
+import { setNoindex, watchDynamicTitle } from '@/composables/usePageMeta'
+import { ApiError } from '@/lib/api'
+import { categoryMeta, pretty } from '@/lib/describe'
+import { collectEans } from '@/lib/storefrontFormat'
+import { errorKind } from '@/lib/errors'
 import { categorySlug as slugOfCategory, modelDetailRoute } from '@/lib/catalogRoutes'
-import { PLACEHOLDER, resolveImageUrl, resolveImageUrls, safeCssUrl, IMG_CARD } from '@/lib/images'
+import {
+  PLACEHOLDER,
+  resolveImageUrl,
+  resolveImageUrls,
+  safeCssUrl,
+  thumbUrl,
+  IMG_CARD,
+} from '@/lib/images'
 
 const route = useRoute()
 const catalog = useCatalog()
@@ -17,8 +28,10 @@ const { categories: knownCategories } = useCategories()
 
 const products = ref([])
 const loading = ref(true)
-const error = ref(null)
+const error = ref(null) // null, 'not-found' (a categoria já não existe) ou 'unavailable' (o servidor não respondeu)
 const categoryData = ref(null)
+const modelCount = ref(null) // modelos mostráveis da categoria sem filtros (só então a meta description os conta)
+const unfilteredModels = ref(null) // esses modelos: dizem que opções de filtro levam a algum modelo
 const selectedFilters = ref({})
 const localSearch = ref('')
 const sortBy = ref('az')
@@ -31,19 +44,29 @@ const filterDefs = computed(() => {
   return catalog.filterDefinitionsForTipo(catalogTipo.value) || []
 })
 const heroImageUrl = computed(() => safeCssUrl(categoryData.value?.imagem) || '')
+// A capa só se vê a partir de 720 px, e com 320 px de largura: miniaturas, não o original (PERF-01).
+const heroSrc = computed(() => thumbUrl(heroImageUrl.value, 480))
+const heroSrcset = computed(() =>
+  heroSrc.value !== heroImageUrl.value
+    ? `${heroSrc.value} 480w, ${thumbUrl(heroImageUrl.value, 960)} 960w`
+    : undefined,
+)
 const tipoLabel = (product) => catalog.badgeLabel(product, catalogTipo.value)
 
 let fetchSeq = 0
 function blankFilters(defs = filterDefs.value) {
-  return Object.fromEntries(
-    (defs || []).filter((def) => def?.field).map((def) => [def.field, '']),
-  )
+  return Object.fromEntries((defs || []).filter((def) => def?.field).map((def) => [def.field, '']))
 }
 
 function resetPageControls() {
   selectedFilters.value = {}
   localSearch.value = ''
   sortBy.value = 'az'
+}
+
+function clearFilters() {
+  resetPageControls()
+  void fetchProducts({ silent: true })
 }
 
 function onFilterChange(field, value) {
@@ -57,32 +80,26 @@ function onFilterChange(field, value) {
 
 let filterTimer = null
 
+// Título e descrição iguais aos que o pré-render escreve no HTML (lib/describe.js): o Google lê os mesmos depois do JavaScript.
 watchDynamicTitle(
-  () => [categoryData.value?.nome, route.params.categorySlug],
+  () => [categoryData.value?.nome, modelCount.value, route.params.categorySlug],
   () => {
-    const nome = categoryData.value?.nome
+    const nome = pretty(categoryData.value?.nome)
     if (!nome) return null
     return {
       title: nome,
-      description: `Modelos ${nome} — explore variantes e peça orçamento online.`,
+      description: categoryMeta(nome, modelCount.value ?? undefined),
       image: categoryData.value?.imagem || PLACEHOLDER,
-      path: route.fullPath,
+      path: route.path, // sem a query (SEO-05)
     }
   },
 )
 
-function nestedEans(value, found = []) {
-  if (!value || typeof value !== 'object') return found
-  if (Array.isArray(value)) {
-    value.forEach((entry) => nestedEans(entry, found))
-    return found
-  }
-  for (const [key, entry] of Object.entries(value)) {
-    if (key === 'ean' && entry != null) found.push(String(entry))
-    else if (entry && typeof entry === 'object') nestedEans(entry, found)
-  }
-  return found
-}
+// Uma categoria sem modelos ou que já não existe não se indexa (FE-05, RP-04): `modelCount` só se conhece sem filtros.
+watch(
+  () => error.value === 'not-found' || modelCount.value === 0,
+  (empty) => setNoindex(empty),
+)
 
 function foldText(value) {
   return String(value || '')
@@ -101,7 +118,9 @@ function searchHaystack(product) {
     product.subtipo,
     product._familia_label,
   ].filter(Boolean)
-  return foldText([product.nome, product.slug, ...extras, ...cores, ...nestedEans(product)].join(' '))
+  return foldText(
+    [product.nome, product.slug, ...extras, ...cores, ...collectEans(product)].join(' '),
+  )
 }
 
 function modelMatchesClientFilters(product, filters) {
@@ -119,6 +138,23 @@ function modelMatchesClientFilters(product, filters) {
     return rows.some((row) => String(row?.[field] ?? '') === wanted)
   })
 }
+
+/**
+ * As opções de um filtro que levam a algum modelo da categoria: «Panos de cozinha» em Material de Cozinha dava 0 modelos
+ * (RP-03). Até a lista chegar mostram-se todas, para o filtro não aparecer e empurrar a grelha.
+ */
+function filterOptions(filterDef) {
+  const options = catalog.filterOptionsForField(filterDef).filter((item) => item.value !== '')
+  const models = unfilteredModels.value
+  if (!models) return options
+  return options.filter((item) =>
+    models.some((model) => modelMatchesClientFilters(model, { [filterDef.field]: item.value })),
+  )
+}
+
+const visibleFilterDefs = computed(() =>
+  filterDefs.value.filter((filterDef) => filterOptions(filterDef).length),
+)
 
 const displayedProducts = computed(() => {
   const query = foldText(localSearch.value.trim())
@@ -143,7 +179,7 @@ const displayedProducts = computed(() => {
 const hasActiveFilters = computed(() =>
   Boolean(
     localSearch.value.trim() ||
-      Object.values(selectedFilters.value).some((value) => String(value ?? '').trim()),
+    Object.values(selectedFilters.value).some((value) => String(value ?? '').trim()),
   ),
 )
 
@@ -158,6 +194,8 @@ async function fetchProducts({ resetCategory = false, silent = false } = {}) {
 
   if (resetCategory) {
     categoryData.value = null
+    modelCount.value = null
+    unfilteredModels.value = null
     products.value = []
     resetPageControls()
   }
@@ -173,8 +211,9 @@ async function fetchProducts({ resetCategory = false, silent = false } = {}) {
       // A lista de categorias já está em memória (cabeçalho/rodapé) — evita
       // uma ida ao servidor só para traduzir o slug em id.
       const rawCategory =
-        knownCategories.value.find((cat) => slugOfCategory(cat) === categorySlug && cat.tipo_catalogo) ||
-        (await apiGet(`/categorias/slug/${encodeURIComponent(categorySlug)}`))
+        knownCategories.value.find(
+          (cat) => slugOfCategory(cat) === categorySlug && cat.tipo_catalogo,
+        ) || (await catalog.fetchCategoryBySlug(categorySlug))
       if (seq !== fetchSeq) return
 
       category = { ...rawCategory, imagem: PLACEHOLDER }
@@ -186,10 +225,7 @@ async function fetchProducts({ resetCategory = false, silent = false } = {}) {
         }
       })
       if (seq !== fetchSeq) return
-      breadcrumbItems.value = [
-        { label: 'Início', to: { name: 'home' } },
-        { label: category.nome },
-      ]
+      breadcrumbItems.value = [{ label: 'Início', to: { name: 'home' } }, { label: category.nome }]
 
       // Quiet initialization: every type filter starts visibly on "Todos".
       selectedFilters.value = blankFilters(
@@ -198,7 +234,7 @@ async function fetchProducts({ resetCategory = false, silent = false } = {}) {
     }
 
     const tipo = category.tipo_catalogo
-    if (!tipo) throw new Error('Categoria sem tipo de catálogo.')
+    if (!tipo) throw new ApiError('Categoria sem tipo de catálogo.', { status: 404 })
 
     const filters = Object.fromEntries(
       Object.entries(selectedFilters.value || {}).filter(([, value]) => String(value ?? '').trim()),
@@ -213,7 +249,9 @@ async function fetchProducts({ resetCategory = false, silent = false } = {}) {
     const visible = Array.isArray(models)
       ? models.filter((model) => {
           if (!model || model.visibilidade === false) return false
-          const pt = model._storefront?.product_table || catalog.storefrontContext(tipo, model)?.product_table
+          const pt =
+            model._storefront?.product_table ||
+            catalog.storefrontContext(tipo, model)?.product_table
           if (!pt) return false
           const rows = Array.isArray(model[pt]) ? model[pt] : model[pt] ? [model[pt]] : []
           const hasEan = rows.some((p) => String(p?.ean || '').trim())
@@ -228,7 +266,10 @@ async function fetchProducts({ resetCategory = false, silent = false } = {}) {
       return {
         model,
         coverPath: cores[0]?.imagem || '',
-        galleryPaths: cores.slice(1).map((cor) => cor.imagem).filter(Boolean),
+        galleryPaths: cores
+          .slice(1)
+          .map((cor) => cor.imagem)
+          .filter(Boolean),
       }
     })
 
@@ -248,12 +289,14 @@ async function fetchProducts({ resetCategory = false, silent = false } = {}) {
       currentImgIdx: 0,
     }))
     products.value = nextProducts
+    if (!Object.keys(filters).length) {
+      modelCount.value = nextProducts.length
+      unfilteredModels.value = nextProducts
+    }
     void hydrateGalleries(nextProducts, seq)
   } catch (err) {
     if (seq !== fetchSeq) return
-    error.value = err?.status === 404
-      ? 'Esta categoria não existe ou deixou de estar disponível.'
-      : err.message || 'Não foi possível carregar os modelos.'
+    error.value = errorKind(err)
     console.error(err)
   } finally {
     if (seq === fetchSeq && !silent) loading.value = false
@@ -298,7 +341,7 @@ const hasGallery = (product) =>
 const coverImage = (product) => {
   const images = galleryImages(product)
   if (!images.length) return PLACEHOLDER
-  const idx = ((product.currentImgIdx || 0) % images.length + images.length) % images.length
+  const idx = (((product.currentImgIdx || 0) % images.length) + images.length) % images.length
   return images[idx] || PLACEHOLDER
 }
 
@@ -320,8 +363,6 @@ const nextImg = (e, product) => {
   live.currentImgIdx = ((live.currentImgIdx || 0) + 1) % imgs.length
 }
 
-
-
 watch(
   () => route.params.categorySlug,
   () => void fetchProducts({ resetCategory: true }),
@@ -329,7 +370,6 @@ watch(
 onMounted(async () => {
   await fetchProducts({ resetCategory: true })
 })
-
 </script>
 
 <template>
@@ -339,15 +379,35 @@ onMounted(async () => {
     <header class="category-head">
       <div class="head-inner">
         <div class="head-text">
-          <h1>{{ categoryData?.nome || 'Catálogo' }}</h1>
+          <h1>{{ pretty(categoryData?.nome) || 'Catálogo' }}</h1>
           <p v-if="categoryData && !loading" class="head-count">
             {{ products.length }} {{ products.length === 1 ? 'modelo' : 'modelos' }}
             <template v-if="hasActiveFilters"> · a mostrar {{ displayedProducts.length }}</template>
           </p>
           <p v-else class="head-count">&nbsp;</p>
+          <p v-if="categoryData && products.length && !loading" class="head-print">
+            <RouterLink
+              :to="{ name: 'catalogue-print', query: { categoria: slugOfCategory(categoryData) } }"
+            >
+              Catálogo desta categoria para imprimir ou guardar em PDF
+            </RouterLink>
+          </p>
         </div>
-        <div v-if="heroImageUrl && heroImageUrl !== PLACEHOLDER" class="head-media" aria-hidden="true">
-          <img :src="heroImageUrl" alt="" decoding="async" fetchpriority="high" />
+        <div
+          v-if="heroImageUrl && heroImageUrl !== PLACEHOLDER"
+          class="head-media"
+          aria-hidden="true"
+        >
+          <img
+            :src="heroSrc"
+            :srcset="heroSrcset"
+            sizes="(max-width: 1000px) 32vw, 320px"
+            alt=""
+            width="320"
+            height="180"
+            loading="lazy"
+            decoding="async"
+          />
         </div>
       </div>
     </header>
@@ -357,7 +417,12 @@ onMounted(async () => {
       <div class="toolbar-inner">
         <label class="tool tool--search">
           <span class="tool-label">Pesquisar</span>
-          <input v-model="localSearch" class="field-input" type="search" placeholder="Nome do modelo, cor ou EAN" />
+          <input
+            v-model="localSearch"
+            class="field-input"
+            type="search"
+            placeholder="Nome do modelo, cor ou EAN"
+          />
         </label>
         <label class="tool">
           <span class="tool-label">Ordenar</span>
@@ -367,7 +432,7 @@ onMounted(async () => {
             <option value="recent">Mais recentes</option>
           </select>
         </label>
-        <label v-for="filterDef in filterDefs" :key="filterDef.field" class="tool">
+        <label v-for="filterDef in visibleFilterDefs" :key="filterDef.field" class="tool">
           <span class="tool-label">{{ filterDef.label }}</span>
           <select
             class="field-select"
@@ -375,67 +440,140 @@ onMounted(async () => {
             @change="onFilterChange(filterDef.field, $event.target.value)"
           >
             <option value="">Todos</option>
-            <option
-              v-for="opt in catalog.filterOptionsForField(filterDef).filter((item) => item.value !== '')"
-              :key="opt.value"
-              :value="opt.value"
-            >{{ opt.label }}</option>
+            <option v-for="opt in filterOptions(filterDef)" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
           </select>
         </label>
       </div>
     </div>
 
     <div class="page-shell page-shell--grid">
-      <div v-if="loading && !products.length" class="grid" aria-busy="true" aria-label="A carregar modelos">
+      <div
+        v-if="loading && !products.length"
+        class="grid"
+        aria-busy="true"
+        aria-label="A carregar modelos"
+      >
         <div v-for="n in 8" :key="n" class="card card--skeleton">
-          <span class="card-media" />
+          <span class="card-media skeleton" />
           <span class="card-body"><span class="sk sk-title" /><span class="sk sk-sub" /></span>
         </div>
       </div>
 
-      <div v-else-if="error" class="state alert alert-error" role="alert">
-        <p>{{ error }}</p>
-        <div class="state-actions">
-          <button type="button" class="btn btn-secondary btn-sm" @click="fetchProducts({ resetCategory: true })">Tentar de novo</button>
-          <RouterLink to="/categorias" class="btn btn-ghost btn-sm">Ver catálogo</RouterLink>
-        </div>
-      </div>
+      <ErrorState
+        v-else-if="error"
+        :kind="error"
+        :title="error === 'not-found' ? 'Esta categoria já não está disponível' : ''"
+        :text="
+          error === 'not-found'
+            ? 'Pode ter sido retirada do catálogo. Veja as outras categorias.'
+            : ''
+        "
+        :back="
+          error === 'not-found' ? { to: { name: 'categories' }, label: 'Ver o catálogo' } : null
+        "
+        @retry="fetchProducts({ resetCategory: true })"
+      />
 
       <ul v-else-if="displayedProducts.length" class="grid">
-        <li v-for="(product, i) in displayedProducts" :key="product.id" v-memo="[product.id, product.nome, coverImage(product), tipoLabel(product)]">
+        <li
+          v-for="(product, i) in displayedProducts"
+          :key="product.id"
+          v-memo="[product.id, product.nome, coverImage(product), tipoLabel(product)]"
+        >
           <RouterLink :to="modelDetailRoute(categoryData, product)" class="card">
             <span class="card-media">
-              <SoftImage :src="coverImage(product)" :alt="product.nome" :eager="i < 4" img-class="card-img" thumb />
+              <SoftImage
+                :src="coverImage(product)"
+                alt=""
+                :eager="i < 4"
+                img-class="card-img"
+                thumb
+              />
               <span v-if="tipoLabel(product)" class="card-badge">{{ tipoLabel(product) }}</span>
-              <span v-if="hasGallery(product)" class="card-nav">
-                <button type="button" class="nav-btn" aria-label="Cor anterior" @click.prevent.stop="prevImg($event, product)">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
-                </button>
-                <button type="button" class="nav-btn" aria-label="Cor seguinte" @click.prevent.stop="nextImg($event, product)">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6" /></svg>
-                </button>
-              </span>
             </span>
             <span class="card-body">
               <span class="card-name">{{ product.nome }}</span>
               <span class="card-meta">
-                {{ (product.modelo_cores || []).length > 1 ? `${(product.modelo_cores || []).length} cores` : 'Ver detalhes' }}
+                {{
+                  (product.modelo_cores || []).length > 1
+                    ? `${(product.modelo_cores || []).length} cores`
+                    : 'Ver detalhes'
+                }}
               </span>
             </span>
           </RouterLink>
+          <span v-if="hasGallery(product)" class="card-nav">
+            <button
+              type="button"
+              class="nav-btn"
+              aria-label="Cor anterior"
+              @click.prevent.stop="prevImg($event, product)"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="nav-btn"
+              aria-label="Cor seguinte"
+              @click.prevent.stop="nextImg($event, product)"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+          </span>
         </li>
       </ul>
 
       <div v-else-if="categoryData" class="state empty">
         <div>
-          <h2>{{ hasActiveFilters ? 'Nenhum modelo corresponde aos filtros' : 'Ainda não há modelos nesta categoria' }}</h2>
+          <h2>
+            {{
+              hasActiveFilters
+                ? 'Nenhum modelo corresponde aos filtros'
+                : 'Ainda não há modelos nesta categoria'
+            }}
+          </h2>
           <p>
-            {{ hasActiveFilters
-              ? 'Altere a pesquisa ou escolha «Todos» nos filtros.'
-              : 'Estamos a preparar esta categoria. Veja as outras ou peça-nos um orçamento directamente.' }}
+            {{
+              hasActiveFilters
+                ? 'Altere a pesquisa ou escolha «Todos» nos filtros.'
+                : 'Estamos a preparar esta categoria. Veja as outras ou peça-nos um orçamento diretamente.'
+            }}
           </p>
         </div>
-        <button v-if="hasActiveFilters" type="button" class="btn btn-secondary" @click="resetPageControls(); fetchProducts({ silent: true })">Limpar filtros</button>
+        <button
+          v-if="hasActiveFilters"
+          type="button"
+          class="btn btn-secondary"
+          @click="clearFilters"
+        >
+          Limpar filtros
+        </button>
         <RouterLink v-else to="/categorias" class="btn btn-secondary">Ver catálogo</RouterLink>
       </div>
     </div>
@@ -459,8 +597,13 @@ onMounted(async () => {
   padding: 2.25rem var(--page-pad);
 }
 
-.head-text h1 {
-  text-transform: capitalize;
+.head-print {
+  margin: 0.35rem 0 0;
+  font-size: 0.92rem;
+}
+
+.head-print a {
+  font-weight: 600;
 }
 
 .head-count {
@@ -488,7 +631,7 @@ onMounted(async () => {
   position: sticky;
   top: var(--header-h);
   z-index: 50;
-  background: rgba(243, 245, 247, 0.96);
+  background: var(--color-toolbar-bg);
   border-bottom: 1px solid var(--color-border);
   backdrop-filter: blur(6px);
 }
@@ -546,7 +689,9 @@ onMounted(async () => {
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   color: inherit;
-  transition: border-color var(--transition), box-shadow var(--transition);
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition);
 }
 
 .card:hover {
@@ -571,7 +716,9 @@ onMounted(async () => {
 
 .card-media :deep(.soft-image__img) {
   object-fit: cover;
-  transition: opacity 0.3s ease, transform 0.5s cubic-bezier(0.2, 0, 0, 1);
+  transition:
+    opacity 0.3s ease,
+    transform 0.5s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .card:hover .card-media :deep(.soft-image__img) {
@@ -584,23 +731,30 @@ onMounted(async () => {
   top: 0.6rem;
   padding: 0.2rem 0.55rem;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--color-chip-bg);
   color: var(--color-ink);
   font-size: 0.75rem;
   font-weight: 600;
 }
 
+/* Irmão da ligação, não filho (HTML válido, A11Y-09): fica no canto da foto, que é quadrada. */
+.grid > li {
+  position: relative;
+  container-type: inline-size;
+}
+
 .card-nav {
   position: absolute;
-  inset: auto 0.5rem 0.5rem auto;
+  top: calc(100cqw - 34px - 0.5rem - 1px);
+  right: calc(0.5rem + 1px);
   display: flex;
   gap: 0.35rem;
   opacity: 0;
   transition: opacity var(--transition);
 }
 
-.card:hover .card-nav,
-.card:focus-within .card-nav {
+.grid > li:hover .card-nav,
+.grid > li:focus-within .card-nav {
   opacity: 1;
 }
 
@@ -617,7 +771,7 @@ onMounted(async () => {
   height: 34px;
   border: none;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--color-chip-bg);
   color: var(--color-ink);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
@@ -649,19 +803,6 @@ onMounted(async () => {
   pointer-events: none;
 }
 
-.card--skeleton .card-media,
-.sk {
-  background: linear-gradient(90deg, var(--color-bg-soft), var(--color-bg), var(--color-bg-soft));
-  background-size: 200% 100%;
-  animation: shimmer 1.3s ease-in-out infinite;
-}
-
-.sk {
-  display: block;
-  height: 12px;
-  border-radius: var(--radius-sm);
-}
-
 .sk-title {
   width: 70%;
 }
@@ -669,28 +810,6 @@ onMounted(async () => {
 .sk-sub {
   width: 35%;
   margin-top: 0.4rem;
-}
-
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-.state {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.state p {
-  margin: 0;
-}
-
-.state-actions {
-  display: flex;
-  gap: 0.5rem;
 }
 
 .empty {
@@ -726,6 +845,11 @@ onMounted(async () => {
 
   .tool {
     flex: 1 1 140px;
+  }
+
+  /* A pesquisa a toda a largura: com 164 px o texto de ajuda aparecia cortado (FE-18). */
+  .tool--search {
+    flex: 1 1 100%;
   }
 
   .grid {

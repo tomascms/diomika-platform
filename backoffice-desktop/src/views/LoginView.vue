@@ -53,6 +53,17 @@ onMounted(async () => {
       }
     }
   }
+  // Sem palavra-passe: o servidor deixa entrar a app instalada; se não deixar (404), mostra o formulário.
+  try {
+    const res = await api.desktopLogin()
+    if (res?.access_token) {
+      remember.value = true
+      await completeLogin(res)
+      return
+    }
+  } catch {
+    /* sem entrada directa: formulário */
+  }
   checking.value = false
 })
 

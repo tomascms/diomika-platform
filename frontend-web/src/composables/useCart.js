@@ -1,50 +1,43 @@
+import { ref } from 'vue'
+import { isValidCartQty, resolveCartQtyRules } from '@/lib/quantity'
+import { captureEvent } from '@/lib/posthog'
+import { itemKey, normalizeCartItems } from '@/lib/quoteLines'
+import { localStore } from '@/lib/storage'
+
 const STORAGE_KEY = 'diomika_cart'
 
-function itemKey(item) {
-  return `${item.ean}|${item.numero_cor}|${item.altura || ''}`
-}
+// Verdadeiro quando o navegador não deixa guardar o pedido (dados do site bloqueados, ou cheios): o pedido fica em
+// memória até se fechar ou recarregar a página, e a loja avisa (StorageNotice.vue). FE-11.
+const storageBlocked = ref(false)
 
 function loadRaw() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
+    const raw = localStore.get(STORAGE_KEY)
+    // Carrinhos antigos (FE-01) trazem `altura` como objecto: normaliza-se sempre que se lê.
+    return raw ? normalizeCartItems(JSON.parse(raw)) : []
   } catch {
     return []
   }
 }
 
 function saveRaw(items) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+  storageBlocked.value = !localStore.set(STORAGE_KEY, JSON.stringify(items))
   window.dispatchEvent(new CustomEvent('diomika-cart-updated'))
 }
 
-export function buildQtyOptions(step = 6, min = 6, max = 6000) {
-  const { step: s, min: m } = resolveCartQtyRules({ carrinho_step: step, carrinho_min: min })
-  const opts = []
-  for (let q = m; q <= max; q += s) {
-    opts.push(q)
-  }
-  return opts
-}
-
-/** Regras de quantidade alinhadas com backend (min fallback = step). */
-export function resolveCartQtyRules(source = {}) {
-  const step = Number(source.carrinho_step ?? source.carrinhoStep) || 6
-  const minRaw = source.carrinho_min ?? source.carrinhoMin
-  const min = minRaw != null && minRaw !== '' ? Number(minRaw) : step
-  return { step, min: Math.max(min, step) }
-}
-
-export function isValidCartQty(qty, source = {}) {
-  const { step, min } = resolveCartQtyRules(source)
-  const q = Number(qty)
-  return q >= min && q <= 6000 && q % step === 0
-}
+export { isValidCartQty, resolveCartQtyRules }
 
 export function useCart() {
   const getItems = () => loadRaw()
 
-  const count = () => loadRaw().reduce((n, i) => n + (i.quantidade || 0), 0)
+  // Artigos (linhas) e unidades: o cabeçalho mostra os artigos, o nome acessível diz as duas coisas (FE-07, RP-17).
+  const summary = () => {
+    const items = loadRaw()
+    return {
+      lines: items.length,
+      units: items.reduce((n, i) => n + (Number(i.quantidade) || 0), 0),
+    }
+  }
 
   const addItem = (item) => {
     const items = loadRaw()
@@ -56,6 +49,12 @@ export function useCart() {
       items.push(item)
     }
     saveRaw(items)
+    // Só com consentimento (captureEvent não faz nada sem ele): que artigos se juntam ao pedido (RP-10).
+    captureEvent('add_to_quote', {
+      ean: item.ean,
+      model: item.modeloNome,
+      quantity: item.quantidade,
+    })
     return items
   }
 
@@ -68,9 +67,7 @@ export function useCart() {
 
   const updateQty = (ean, numeroCor, quantidade, altura = '') => {
     const key = `${ean}|${numeroCor}|${altura || ''}`
-    const items = loadRaw().map((i) =>
-      itemKey(i) === key ? { ...i, quantidade } : i,
-    )
+    const items = loadRaw().map((i) => (itemKey(i) === key ? { ...i, quantidade } : i))
     saveRaw(items)
     return items
   }
@@ -79,5 +76,5 @@ export function useCart() {
     saveRaw([])
   }
 
-  return { getItems, count, addItem, removeItem, updateQty, clear, buildQtyOptions }
+  return { getItems, summary, addItem, removeItem, updateQty, clear, storageBlocked }
 }

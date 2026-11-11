@@ -36,6 +36,6 @@ def note_login_failure(username: str, ip: str) -> None:
     send_alert(
         "Anomalia: brute-force login admin",
         severity="critical",
-        detail={"username": username, "ip": ip, "fails": len(hits), "window_sec": window},
+        detail={"fails": len(hits), "window_sec": window},  # sem IP nem utilizador: o webhook é de terceiros (LEGAL-16)
     )
     logger.error("ANOMALY login fails user=%s ip=%s n=%s", username, ip, len(hits))

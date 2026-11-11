@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diomika — Têxteis para o lar, para revenda</title>
-    <meta name="description" content="Catálogo B2B da Diomika: almofadas, assentos, toalhas de mesa, aventais e mais. Escolha modelos, cores e medidas e peça orçamento online.">
+    <title>Diomika — Têxteis para o lar</title>
+    <meta name="description" content="Diomika: almofadas, assentos, toalhas de mesa, aventais e mais. Escolha modelos, cores e medidas e peça orçamento online.">
     <meta name="theme-color" content="#ffffff">
     <!-- ?v= força os browsers a largar o favicon antigo que têm em cache -->
     <link rel="icon" href="/favicon.svg?v=3" type="image/svg+xml">
@@ -19,7 +19,35 @@
     <meta property="og:title" content="Diomika — Catálogo">
     <meta property="og:description" content="Escolha modelos, cores e medidas e peça orçamento online.">
     <meta property="og:image" content="/icon-512.png">
-    <meta name="twitter:card" content="summary">
+    <meta name="twitter:card" content="summary_large_image">
+    <!-- Dados estruturados no HTML servido (crawlers sem JS). Se COMPANY (src/lib/constants.js) mudar, mudar aqui também. -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Diomika",
+      "legalName": "DIOMIKA INTERNACIONAL, UNIPESSOAL, LDA",
+      "url": "https://www.diomika.com/",
+      "logo": "https://www.diomika.com/icon-512.png",
+      "vatID": "PT508651557",
+      "telephone": "+351935745663",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Rua da Quintã, n.º 89",
+        "postalCode": "4805-116",
+        "addressLocality": "Caldas das Taipas",
+        "addressCountry": "PT"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Diomika",
+      "url": "https://www.diomika.com/"
+    }
+    </script>
   </head>
   <body>
     <div id="app"></div>

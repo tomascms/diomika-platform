@@ -208,6 +208,12 @@ def invalidate_catalog_change(
     bump_catalog_version()
     invalidate_prefix("admin:merged:")
     invalidate_key("catalog:meta")
+    # A lista de categorias leva a contagem de modelos (`modelos_visiveis`): publicar ou esconder um modelo, uma
+    # variante ou uma cor muda-a, por isso não pode esperar pelo fim da hora de cache.
+    invalidate_key("categories:all")
+    # A pesquisa corre sobre um índice dos modelos (`catalog:search-index`) e guarda cada resposta (`catalog:search:…`):
+    # nenhuma das duas era apagada, e um modelo novo só aparecia nas pesquisas passada a hora de cache.
+    invalidate_prefix("catalog:search")
     _rewarm_details_later()
 
     if not table_name:

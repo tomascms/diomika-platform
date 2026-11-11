@@ -2,23 +2,23 @@
 # Só o que a API importa a correr. Testes, scanners e os extras dos módulos
 # opcionais (tracing, websockets, sagas…) estão em requirements-dev.txt, para
 # a imagem Docker da VM (e2-micro, 1 GB) ficar pequena e o build não falhar.
-fastapi
-uvicorn
-python-multipart
-python-dotenv
-supabase
-requests
-pydantic
-email-validator
-psycopg2-binary
-Pillow
-python-barcode
-reportlab
-certifi
-pip-system-certs
-pyotp
-redis
-sentry-sdk[fastapi]
-boto3
-cryptography
-httpx
+fastapi==0.162.0
+uvicorn==0.34.2
+python-multipart==0.0.32
+python-dotenv==1.2.2
+supabase==2.31.0
+requests==2.34.2
+pydantic==2.11.9
+email-validator==2.3.0
+psycopg2-binary==2.9.12
+Pillow==13.0.0
+python-barcode==0.16.1
+reportlab==5.0.1
+certifi==2026.10.18
+pip-system-certs==5.3
+pyotp==2.10.0
+redis==5.2.1
+sentry-sdk[fastapi]==2.25.1
+boto3==1.43.123
+cryptography==50.0.0
+httpx==0.28.1

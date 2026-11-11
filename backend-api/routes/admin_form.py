@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from core.admin_form_schema import build_form_schema
 from core.auth import assert_table_action, require_admin
 from core.local_only import admin_must_be_local
+from core.path_ids import UuidStr
 from models.catalog_registry import tipo_for_table, product_table_for_tipo, colors_table_for_tipo
 from routes.admin_crud import _db_table, _scoped, admin_list_rows, relation_options
 from models.catalog_registry import all_model_tables, list_select_query
@@ -83,7 +84,7 @@ def _discriminator_options(fields: list[dict], id_modelo: str | None) -> dict[st
 def form_bundle(
     request: Request,
     table_name: str,
-    id: str | None = None,
+    id: UuidStr | None = None,
 ):
     """Schema + registo + opções de relação + categorias (+ cores e EAN de um modelo), de uma só vez."""
     schema = build_form_schema(table_name)
@@ -134,7 +135,9 @@ def form_bundle(
             logger.warning("Formulário %s: %s falhou", table_name, key, exc_info=True)
             results[key] = None
 
-    record = results.get("record")
+    from models.catalog_registry import unfold_attributes
+
+    record = unfold_attributes(table_name, results.get("record"), [f["name"] for f in fields])
     if id and not record:
         raise HTTPException(status_code=404, detail="Registo não encontrado")
     relations = {rel: results.get(("rel", rel)) or [] for rel in rel_tables}

@@ -1,10 +1,17 @@
 // @ts-check
+import process from 'node:process'
 import { test, expect } from '@playwright/test'
 
 const site = process.env.E2E_SITE_URL || 'https://www.diomika.com'
-const api = process.env.E2E_API_URL || 'https://api.diomika.com'
+// Sem valor por omissão: o `.env` da raiz é de produção, por isso estes testes só correm contra
+// a API que a pessoa indicar (staging, local ou, de propósito, produção: deploy/verify_production.py).
+const api = process.env.E2E_API_URL
 
 test.describe('Diomika critical flow', () => {
+  test.beforeAll(() => {
+    if (!api) throw new Error('E2E_API_URL em falta: o projecto prod só corre com ela definida.')
+  })
+
   test('API health ready', async ({ request }) => {
     const h = await request.get(`${api}/health`, {
       headers: { 'User-Agent': 'Mozilla/5.0 DiomikaE2E' },

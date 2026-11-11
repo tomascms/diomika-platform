@@ -15,7 +15,7 @@ Para adicionar uma categoria nova (ex.: mantas):
 
 Cada atributo é um dict com:
   type      — "enum" | "composition" | "dimension_list" | "dimension_single"
-              | "string_list" | "string_single" | "string"
+              | "string_list" | "string_single" | "string" | "integer"
   required  — bool
   label     — rótulo no formulário
   widget    — widget explícito (opcional; inferido do type se omitido)
@@ -23,6 +23,7 @@ Cada atributo é um dict com:
   hidden    — campo legado, não mostrar no formulário (continua validado se vier)
   lock_on_edit — variantes: não editável depois de criado (chave de negócio)
   placeholder — texto de apoio no formulário
+  omit_if_empty — opcional: se ficar vazio não entra no `attributes` (em vez de uma chave com null)
 """
 from __future__ import annotations
 
@@ -186,6 +187,33 @@ CATEGORY_ATTRIBUTE_SCHEMAS: Dict[str, dict] = {
             "dimensoes": _DIMENSOES_VARIANT_FIELD,
         },
     },
+    # Cintos: os modelos são Homem, Mulher e Criança. Sem medidas e sem tipo de cinto no produto (EAN): o tipo já
+    # aparece no modelo. Os produtos ficam só com o EAN, por isso a loja mostra um produto por modelo («unico»):
+    # sem picker, o modo «variantes» deixava o modelo sem opções e a página dizia «já não está disponível».
+    "cinto": {
+        "label": "Cintos",
+        "model_discriminator_field": None,
+        "apply_barcode_on_save": True,
+        "storefront_mode": "unico",
+        "model_attributes": {},
+        "variant_attributes": {},
+    },
+    # Toalhas de praia: separadas das de mesa, mas no mesmo molde (composição e dimensões).
+    "toalha_praia": {
+        "label": "Toalhas de praia",
+        "model_discriminator_field": "dimensoes",
+        "product_readonly_on_edit": True,
+        "apply_barcode_on_save": True,
+        "storefront_mode": "variantes",
+        "storefront_picker": {"source": "products", "field": "dimensoes", "label": "Dimensão (comprimento×largura)", "format": "dimensions", "suffix": " cm"},
+        "model_attributes": {
+            "composicao": _COMPOSICAO_FIELD,
+            "dimensoes": _DIMENSOES_MODEL_FIELD,
+        },
+        "variant_attributes": {
+            "dimensoes": _DIMENSOES_VARIANT_FIELD,
+        },
+    },
     "avental": {
         "label": "Aventais",
         "model_discriminator_field": None,
@@ -279,6 +307,71 @@ CATEGORY_ATTRIBUTE_SCHEMAS: Dict[str, dict] = {
         "cross_field_validator": _regional_cross_validate,
     },
 }
+
+# Informação de produto que o comprador B2B pede antes de encomendar (auditoria RP-08): igual em todas as famílias e
+# toda opcional. O cliente preenche-a no backoffice (ficha do cliente, Parte D, itens 14 e 15) e a loja mostra só o que
+# estiver preenchido, a seguir às especificações da família. Vive em `attributes` (jsonb): não há migração.
+# `omit_if_empty`: o que não se preenche não entra no `attributes` (seis «null» em cada modelo não dizem nada).
+PRODUCT_INFO_ATTRIBUTES: Dict[str, dict] = {
+    # Passo e mínimo do pedido deste modelo (12 → 12, 24, 36…); vazio fica o da categoria. `quantity_rules` aplica-o.
+    "incremento": {
+        "type": "integer",
+        "required": False,
+        "label": "Incremento (é também a quantidade mínima)",
+        "placeholder": "vazio: o da categoria",
+        "omit_if_empty": True,
+        "storefront_hidden": True,
+    },
+    "cuidados": {
+        "type": "string",
+        "required": False,
+        "label": "Cuidados de lavagem",
+        "placeholder": "ex: lavar a 30 °C, não usar lixívia",
+        "omit_if_empty": True,
+    },
+    "embalagem": {
+        "type": "integer",
+        "required": False,
+        "label": "Embalagem (un. por caixa)",
+        "placeholder": "ex: 12",
+        "omit_if_empty": True,
+    },
+    "gramagem": {
+        "type": "integer",
+        "required": False,
+        "label": "Gramagem (g/m²)",
+        "placeholder": "ex: 180",
+        "omit_if_empty": True,
+    },
+    "origem": {
+        "type": "string",
+        "required": False,
+        "label": "País de origem",
+        "placeholder": "ex: Portugal",
+        "omit_if_empty": True,
+    },
+    "certificacao": {
+        "type": "string",
+        "required": False,
+        "label": "Certificações",
+        "placeholder": "ex: OEKO-TEX Standard 100",
+        "omit_if_empty": True,
+    },
+    "prazo": {
+        "type": "string",
+        "required": False,
+        "label": "Prazo de entrega",
+        "placeholder": "ex: 5 a 10 dias úteis",
+        "omit_if_empty": True,
+    },
+}
+
+# Em todas as famílias, incluindo as que se acrescentarem; um campo da própria família com o mesmo nome fica como está.
+for _cfg in CATEGORY_ATTRIBUTE_SCHEMAS.values():
+    _cfg["model_attributes"] = {
+        **_cfg["model_attributes"],
+        **{name: desc for name, desc in PRODUCT_INFO_ATTRIBUTES.items() if name not in _cfg["model_attributes"]},
+    }
 
 # Categorias "agregadas" (vitrine única sobre várias tipo_catalogo) — material de cozinha.
 AGGREGATED_CATEGORY_GROUPS: Dict[str, List[str]] = {
@@ -395,6 +488,15 @@ def _validate_one(name: str, desc: dict, value: Any) -> Any:
         if required and not cleaned:
             raise ValueError(f"{desc.get('label') or name}: campo obrigatório.")
         return cleaned
+    if t == "integer":
+        label = desc.get("label") or name
+        try:
+            number = int(str(value).strip())
+        except ValueError:
+            raise ValueError(f"{label}: indique um número inteiro.") from None
+        if number < 1:
+            raise ValueError(f"{label}: tem de ser maior do que zero.")
+        return number
     return value
 
 
@@ -408,7 +510,10 @@ def validate_attributes(tipo: str, level: AttrLevel, data: dict | None) -> dict:
     data = data or {}
     cleaned: dict = {}
     for name, desc in schema.items():
-        cleaned[name] = _validate_one(name, desc, data.get(name))
+        value = _validate_one(name, desc, data.get(name))
+        if desc.get("omit_if_empty") and value in (None, "", [], {}):
+            continue
+        cleaned[name] = value
 
     if level == "model":
         cross = cfg.get("cross_field_validator")
@@ -416,3 +521,13 @@ def validate_attributes(tipo: str, level: AttrLevel, data: dict | None) -> dict:
             cross(cleaned)
 
     return cleaned
+
+
+def quantity_rules(category: dict | None, model_attrs: dict | None = None) -> tuple[int, int]:
+    """(passo, mínimo) de uma linha do pedido: o `incremento` do modelo, se houver; senão o da categoria."""
+    inc = (model_attrs or {}).get("incremento")
+    if isinstance(inc, int) and inc > 0:
+        return inc, inc
+    cat = category or {}
+    step = cat.get("carrinho_step") or 6
+    return step, max(cat.get("carrinho_min") or step, step)

@@ -1,0 +1,259 @@
+[
+  {
+    "tipo": "decorativa",
+    "dimensoes": [
+      "35x55",
+      "45x45",
+      "60x60"
+    ],
+    "composicao": {
+      "Veludo": 100
+    },
+    "id": "5e5f7104-dec3-415c-8996-b16891899c87",
+    "id_categoria": "4bba6298-b2d8-4d80-9303-49118f2bb29c",
+    "tipo_catalogo": "almofada",
+    "nome": "Agate",
+    "slug": "agate",
+    "descricao": "Sem descrição",
+    "attributes": {
+      "tipo": "decorativa",
+      "dimensoes": [
+        "35x55",
+        "45x45",
+        "60x60"
+      ],
+      "composicao": {
+        "Veludo": 100
+      }
+    },
+    "visibilidade": true,
+    "created_at": "2026-06-18T00:27:47.01797+00:00",
+    "updated_at": "2026-10-03T16:06:27.93095+00:00",
+    "categories": {
+      "id": "4bba6298-b2d8-4d80-9303-49118f2bb29c",
+      "nome": "Almofada",
+      "slug": "almofada",
+      "carrinho_min": 12,
+      "carrinho_step": 12,
+      "tipo_catalogo": "almofada"
+    },
+    "product_variants": [
+      {
+        "dimensoes": "35x55",
+        "id": "4211a2a9-92ae-4906-a6ec-ec1543e526b5",
+        "ean": "5606044199011",
+        "attributes": {
+          "dimensoes": "35x55"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/barcodes/5606044199011.png",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "45x45",
+        "id": "b9831278-1479-43db-83db-1b564b69ecc5",
+        "ean": "5606044191237",
+        "attributes": {
+          "dimensoes": "45x45"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/barcodes/5606044191237.png",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "60x60",
+        "id": "bcce4d26-7008-413f-b9d2-e849d0cca569",
+        "ean": "5606044197895",
+        "attributes": {
+          "dimensoes": "60x60"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/barcodes/5606044197895.png",
+        "visibilidade": true
+      }
+    ],
+    "modelo_cores": [
+      {
+        "id_modelo": "5e5f7104-dec3-415c-8996-b16891899c87",
+        "numero": 1,
+        "nome": "Sortido",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_almofada_cores/imagem/74b0c75dd3ba43459a00a5053d818814.png",
+        "visibilidade": true
+      }
+    ],
+    "_tipo_catalogo": "almofada",
+    "_storefront": {
+      "mode": "variantes",
+      "product_table": "product_variants",
+      "picker": {
+        "source": "products",
+        "field": "dimensoes",
+        "label": "Dimensão (comprimento×largura)",
+        "format": "dimensions",
+        "suffix": " cm"
+      },
+      "specs": [
+        {
+          "field": "composicao",
+          "label": "Composição (%) — igual para todas as cores",
+          "widget": "composition",
+          "enum_labels": {}
+        },
+        {
+          "field": "dimensoes",
+          "label": "Dimensões (comprimento×largura)",
+          "widget": "dimension_list",
+          "enum_labels": {}
+        }
+      ],
+      "badge": {
+        "field": "tipo",
+        "labels": {
+          "decorativa": "Decorativa",
+          "dormir": "Dormir"
+        }
+      }
+    },
+    "_storefront_mode": "variantes"
+  },
+  {
+    "tipo": "decorativa",
+    "dimensoes": [
+      "35x50",
+      "45x45",
+      "60x60"
+    ],
+    "composicao": {
+      "Poliester": 100
+    },
+    "id": "ac27d90f-3fc6-4bc8-a453-4c985ed9d53d",
+    "id_categoria": "4bba6298-b2d8-4d80-9303-49118f2bb29c",
+    "tipo_catalogo": "almofada",
+    "nome": "Foglia",
+    "slug": "foglia",
+    "descricao": "Sem descrição",
+    "attributes": {
+      "tipo": "decorativa",
+      "dimensoes": [
+        "35x50",
+        "45x45",
+        "60x60"
+      ],
+      "composicao": {
+        "Poliester": 100
+      }
+    },
+    "visibilidade": true,
+    "created_at": "2026-06-15T12:27:02.496009+00:00",
+    "updated_at": "2026-10-03T20:46:54.867641+00:00",
+    "categories": {
+      "id": "4bba6298-b2d8-4d80-9303-49118f2bb29c",
+      "nome": "Almofada",
+      "slug": "almofada",
+      "carrinho_min": 12,
+      "carrinho_step": 12,
+      "tipo_catalogo": "almofada"
+    },
+    "product_variants": [
+      {
+        "dimensoes": "35x50",
+        "id": "0f5e96b3-31dc-41e6-a125-ab995142fdf6",
+        "ean": "5606044506574",
+        "attributes": {
+          "dimensoes": "35x50"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/barcodes/5606044506574.png",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "45x45",
+        "id": "6189e424-498e-4676-9d56-11b4e328f870",
+        "ean": "5606044506598",
+        "attributes": {
+          "dimensoes": "45x45"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/barcodes/5606044506598.png",
+        "visibilidade": true
+      },
+      {
+        "dimensoes": "60x60",
+        "id": "919318cc-2cf4-4f39-9f34-bcf594fffa47",
+        "ean": "5606044506734",
+        "attributes": {
+          "dimensoes": "60x60"
+        },
+        "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/barcodes/5606044506734.png",
+        "visibilidade": true
+      }
+    ],
+    "modelo_cores": [
+      {
+        "id_modelo": "ac27d90f-3fc6-4bc8-a453-4c985ed9d53d",
+        "numero": 12,
+        "nome": "Azul Ciano",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelos_almofadas/imagem/a1421d52d30c4722bef669955cfc0365.png",
+        "visibilidade": true
+      },
+      {
+        "id_modelo": "ac27d90f-3fc6-4bc8-a453-4c985ed9d53d",
+        "numero": 13,
+        "nome": "Azul Marinho",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelos_almofadas/imagem/05ea8f7948d04380a0e8072df2f552da.png",
+        "visibilidade": true
+      },
+      {
+        "id_modelo": "ac27d90f-3fc6-4bc8-a453-4c985ed9d53d",
+        "numero": 18,
+        "nome": "Bege",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelos_almofadas/imagem/97ac1420fd4445dd88214d983f8ea03a.png",
+        "visibilidade": true
+      },
+      {
+        "id_modelo": "ac27d90f-3fc6-4bc8-a453-4c985ed9d53d",
+        "numero": 21,
+        "nome": "Caqui",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelos_almofadas/imagem/3a082aef00b34692baff73f9a153c050.png",
+        "visibilidade": true
+      },
+      {
+        "id_modelo": "ac27d90f-3fc6-4bc8-a453-4c985ed9d53d",
+        "numero": 22,
+        "nome": "Vermelho",
+        "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelos_almofadas/imagem/296feb5d7c354148a84cf669c6d7d669.png",
+        "visibilidade": true
+      }
+    ],
+    "_tipo_catalogo": "almofada",
+    "_storefront": {
+      "mode": "variantes",
+      "product_table": "product_variants",
+      "picker": {
+        "source": "products",
+        "field": "dimensoes",
+        "label": "Dimensão (comprimento×largura)",
+        "format": "dimensions",
+        "suffix": " cm"
+      },
+      "specs": [
+        {
+          "field": "composicao",
+          "label": "Composição (%) — igual para todas as cores",
+          "widget": "composition",
+          "enum_labels": {}
+        },
+        {
+          "field": "dimensoes",
+          "label": "Dimensões (comprimento×largura)",
+          "widget": "dimension_list",
+          "enum_labels": {}
+        }
+      ],
+      "badge": {
+        "field": "tipo",
+        "labels": {
+          "decorativa": "Decorativa",
+          "dormir": "Dormir"
+        }
+      }
+    },
+    "_storefront_mode": "variantes",
+    "_has_more": false
+  }
+]

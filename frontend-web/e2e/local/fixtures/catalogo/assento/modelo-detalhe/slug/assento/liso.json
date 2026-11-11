@@ -1,0 +1,99 @@
+{
+  "alturas": [
+    "32mm",
+    "45mm"
+  ],
+  "material_forro": "Poliéster",
+  "material_enchimento": "Poliuretano",
+  "id": "84448c2f-1783-433d-a8b1-3ad20c3f6cec",
+  "id_categoria": "46f8285b-f290-4ecd-a6b5-f95f4a8af37e",
+  "tipo_catalogo": "assento",
+  "nome": "Liso",
+  "slug": "liso",
+  "descricao": "Sem descrição",
+  "attributes": {
+    "alturas": [
+      "32mm",
+      "45mm"
+    ],
+    "material_forro": "Poliéster",
+    "material_enchimento": "Poliuretano"
+  },
+  "visibilidade": true,
+  "created_at": "2026-08-28T10:13:53.628678+00:00",
+  "updated_at": "2026-10-03T16:21:06.489627+00:00",
+  "categories": {
+    "id": "46f8285b-f290-4ecd-a6b5-f95f4a8af37e",
+    "nome": "Assento",
+    "carrinho_step": 12,
+    "carrinho_min": 12,
+    "slug": "assento",
+    "tipo_catalogo": "assento"
+  },
+  "product_variants": [
+    {
+      "altura": "32mm",
+      "id": "7ba06e0c-07b0-404f-b876-4ac35c65ac33",
+      "ean": "5606044500213",
+      "id_modelo": "84448c2f-1783-433d-a8b1-3ad20c3f6cec",
+      "attributes": {
+        "altura": "32mm"
+      },
+      "created_at": "2026-08-28T10:14:29.108535+00:00",
+      "updated_at": "2026-10-03T16:21:07.001972+00:00",
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500213.png?token=expirado",
+      "visibilidade": true,
+      "tipo_catalogo": "assento"
+    },
+    {
+      "altura": "45mm",
+      "id": "73844f61-58bb-4518-ae37-9c289751a8cd",
+      "ean": "5606044500206",
+      "id_modelo": "84448c2f-1783-433d-a8b1-3ad20c3f6cec",
+      "attributes": {
+        "altura": "45mm"
+      },
+      "created_at": "2026-08-28T10:14:51.158566+00:00",
+      "updated_at": "2026-10-03T16:21:07.001972+00:00",
+      "barcode_url": "https://your-project-ref.supabase.co/storage/v1/object/sign/product-images/barcodes/5606044500206.png?token=expirado",
+      "visibilidade": true,
+      "tipo_catalogo": "assento"
+    }
+  ],
+  "modelo_cores": [
+    {
+      "id_modelo": "84448c2f-1783-433d-a8b1-3ad20c3f6cec",
+      "numero": 1,
+      "nome": "Sortido",
+      "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/modelo_assento_cores/imagem/4e09c040fd8a430fb30504a4aa9ca277.png",
+      "visibilidade": true
+    }
+  ],
+  "_tipo_catalogo": "assento",
+  "_storefront": {
+    "mode": "assento",
+    "product_table": "product_variants",
+    "picker": {
+      "source": "products",
+      "field": "altura",
+      "label": "Altura",
+      "format": "plain"
+    },
+    "specs": [
+      {
+        "field": "material_forro",
+        "label": "Material do forro",
+        "widget": "string",
+        "enum_labels": {}
+      },
+      {
+        "field": "material_enchimento",
+        "label": "Material do enchimento",
+        "widget": "string",
+        "enum_labels": {}
+      }
+    ],
+    "badge": null
+  },
+  "_storefront_mode": "assento"
+}

@@ -34,10 +34,10 @@ def test_two_categories_can_share_the_same_tipo_catalogo():
     assert a.slug != b.slug
 
 
-def test_categories_available_tipos_lists_all_twelve_families():
+def test_categories_available_tipos_lists_all_families():
     from routes.system import categories_available_tipos
 
     out = categories_available_tipos()
     tipos = {t["tipo"] for t in out["tipos"]}
-    assert len(tipos) == 12
-    assert "almofada" in tipos and "regional" in tipos
+    assert len(tipos) == 14
+    assert "almofada" in tipos and "regional" in tipos and {"cinto", "toalha_praia"} <= tipos

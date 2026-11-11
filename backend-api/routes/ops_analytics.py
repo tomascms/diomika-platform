@@ -4,9 +4,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 
 from core.auth import require_ops
+from core.local_only import admin_must_be_local
 from core.business_analytics import build_business_summary
 
-router = APIRouter(prefix="/ops", tags=["Ops"])
+router = APIRouter(prefix="/ops", tags=["Ops"], dependencies=[Depends(admin_must_be_local)])
 
 
 @router.get("/analytics/summary")

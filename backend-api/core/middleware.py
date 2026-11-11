@@ -1,13 +1,15 @@
 """Middleware: segurança, request-id, rate limit global."""
 from __future__ import annotations
 
+import hashlib
 import os
+import re
 import time
 import uuid
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 
 from core import metrics
 from core.config import get_settings
@@ -25,9 +27,14 @@ ALLOWED_CORS_HEADERS = [
     "X-Request-Id",
 ]
 
+_REQUEST_ID_RE = re.compile(r"[A-Za-z0-9-]{1,64}")
+
+
 class RequestIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        request_id = request.headers.get("X-Request-Id") or str(uuid.uuid4())
+        request_id = request.headers.get("X-Request-Id") or ""
+        if not _REQUEST_ID_RE.fullmatch(request_id):  # não se reflecte texto arbitrário do cliente (SEG-20)
+            request_id = str(uuid.uuid4())
         request.state.request_id = request_id
         started = time.perf_counter()
         response: Response = await call_next(request)
@@ -57,6 +64,18 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+def _catalog_etag(request: Request) -> str:
+    from core.cache import catalog_version
+    from core.version import BUILD
+
+    url_id = hashlib.sha1(request.url.path.encode() + b"?" + request.url.query.encode(), usedforsecurity=False).hexdigest()[:12]
+    return f'W/"{BUILD}-{catalog_version()}-{url_id}"'
+
+
+def _if_none_match(request: Request) -> set[str]:
+    return {tag.strip() for tag in request.headers.get("if-none-match", "").split(",") if tag.strip()}
+
+
 class CatalogCacheHeadersMiddleware(BaseHTTPMiddleware):
     """Cache-Control para leituras públicas de catálogo."""
 
@@ -71,6 +90,13 @@ class CatalogCacheHeadersMiddleware(BaseHTTPMiddleware):
         # invalidada pela versão do catálogo.
         if is_public_catalog_path(path):
             response.headers.setdefault("Cache-Control", "no-cache")
+            # Validador (API-14): o browser revalida e recebe 304 sem corpo enquanto o catálogo não mudar.
+            # Fraco (W/): o GZip por fora muda os bytes mas não o conteúdo. Inclui a versão do código:
+            # um deploy que muda o formato da resposta não pode ser coberto por um 304 antigo.
+            etag = _catalog_etag(request)
+            response.headers["ETag"] = etag
+            if etag in _if_none_match(request):
+                return Response(status_code=304, headers={"ETag": etag, "Cache-Control": "no-cache"})
         return response
 
 
@@ -148,8 +174,10 @@ class BotDefenseMiddleware(BaseHTTPMiddleware):
 
         user_agent = request.headers.get("user-agent", "")
         if is_bot_user_agent(user_agent):
-            client_ip = request.client.host if request.client else "unknown"
+            from core.rate_limit import get_client_ip
+
+            client_ip = get_client_ip(request)
             log_bot_attempt(client_ip, user_agent, request.url.path)
-            return Response("Acesso negado", status_code=403)
+            return JSONResponse({"detail": "Acesso negado"}, status_code=403)
 
         return await call_next(request)

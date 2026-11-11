@@ -29,7 +29,7 @@ defineProps({
 }
 
 .breadcrumbs-inner {
-  padding-top: 1.1rem;
+  padding-top: 0.85rem;
   padding-bottom: 0;
 }
 
@@ -56,7 +56,10 @@ defineProps({
   color: var(--color-border-strong);
 }
 
+/* Alvo de toque com mais de 24 px (WCAG 2.5.8, FE-18): «Início» tinha 33×22 px. */
 .breadcrumb-item a {
+  display: inline-block;
+  padding: 4px 2px;
   color: var(--color-muted);
 }
 

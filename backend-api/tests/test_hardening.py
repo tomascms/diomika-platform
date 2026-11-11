@@ -59,22 +59,6 @@ def test_trusted_proxy_ignores_spoofed_xff_without_trusted_peer():
         assert get_client_ip(Req()) == "203.0.113.50"
 
 
-def test_trusted_proxy_uses_xff_from_trusted_peer(monkeypatch):
-    from core.rate_limit import get_client_ip
-
-    monkeypatch.setenv("TRUSTED_PROXY_IPS", "127.0.0.1")
-
-    class Client:
-        host = "127.0.0.1"
-
-    class Req:
-        client = Client()
-        headers = {"x-forwarded-for": "198.51.100.10, 127.0.0.1"}
-
-    with patch("core.rate_limit.trust_proxy_headers", return_value=True):
-        assert get_client_ip(Req()) == "198.51.100.10"
-
-
 def test_production_rejects_ssl_insecure(monkeypatch):
     monkeypatch.setenv("DIOMIKA_ENV", "production")
     monkeypatch.delenv("DIOMIKA_BETA", raising=False)

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Portão local (DEVOPS-07): o GitHub gratuito não protege ramos privados. Falhar aqui impede o push.
+# Saltar só em emergência: git push --no-verify (e dizer porquê no PR).
+exec python scripts/ci_local.py --fast

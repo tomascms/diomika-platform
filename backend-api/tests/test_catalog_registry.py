@@ -8,8 +8,8 @@ def test_list_select_query_product_joins_category_via_model():
     alturas, ...)."""
     from models.catalog_registry import list_select_query
 
-    assert list_select_query("almofada") == "*, product_models(nome, attributes, categories(nome))"
-    assert list_select_query("assento") == "*, product_models(nome, attributes, categories(nome))"
+    assert list_select_query("almofada") == "*, product_models(nome, made_in, attributes, categories(nome))"
+    assert list_select_query("assento") == "*, product_models(nome, made_in, attributes, categories(nome))"
 
 
 def test_list_select_query_model_joins_category_directly():
@@ -37,6 +37,8 @@ def test_catalog_types_registered():
         "guarda_chuva",
         "oculo",
         "toalha_mesa",
+        "toalha_praia",
+        "cinto",
         "avental",
         "luva",
         "pega",

@@ -14,8 +14,14 @@ const message = ref('')
 const saving = ref(false)
 
 const mode = computed(() => picker.value?.mode || '')
-const step = computed(() => picker.value?.carrinho_step || 6)
-const minQ = computed(() => picker.value?.carrinho_min || 6)
+// O modelo pode ter incremento próprio (é também o mínimo); sem modelo escolhido, o da categoria.
+const chosen = computed(() =>
+  mode.value === 'assento'
+    ? picker.value?.models?.find((x) => x.modelo_id === assentoForm.value.modelo_id)
+    : picker.value?.products?.find((x) => x.ean === variantForm.value.ean),
+)
+const step = computed(() => chosen.value?.carrinho_step || picker.value?.carrinho_step || 6)
+const minQ = computed(() => chosen.value?.carrinho_min || picker.value?.carrinho_min || 6)
 
 const variantForm = ref({ ean: '', numero_cor: '', quantidade: minQ })
 const assentoForm = ref({ modelo_id: '', altura: '', numero_cor: '', quantidade: minQ })

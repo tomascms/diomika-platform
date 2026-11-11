@@ -4,6 +4,7 @@ import { api } from '@/lib/api'
 import { useAutoRefresh } from '@/composables/useAutoRefresh'
 import DataList from '@/components/DataList.vue'
 import OrderRecordPanel from '@/components/OrderRecordPanel.vue'
+import { statusLabel } from '@/lib/quote'
 
 const rows = ref([])
 const selected = ref(null)
@@ -13,7 +14,7 @@ const message = ref('')
 
 const columns = [
   { key: 'nome', label: 'Cliente', format: (r) => r.nome || r.referencia_cliente || '—' },
-  { key: 'email', label: 'Email' },
+  { key: 'email', label: 'Email', format: (r) => [r.email, statusLabel(r.status)].filter(Boolean).join(' · ') },
 ]
 
 const load = async ({ soft = false } = {}) => {
@@ -30,10 +31,19 @@ const load = async ({ soft = false } = {}) => {
 
 const openRow = async (row) => {
   selected.value = row
-  if (!row.lida) {
+  let record = row
+  try {
+    // A lista traz só id, nome e data (select leve): o detalhe (email, empresa, NIF, linhas…) vem do registo.
+    record = { ...row, ...(await api.getRecord('pedidos_orcamento', row.id)) }
+    if (selected.value?.id === row.id) selected.value = record
+  } catch (e) {
+    error.value = e.message
+  }
+  if (!record.lida) {
     try {
       await api.setLida('pedidos_orcamento', row.id, true)
       row.lida = true
+      if (selected.value?.id === row.id) selected.value = { ...selected.value, lida: true }
     } catch (e) {
       error.value = e.message
     }
@@ -45,7 +55,8 @@ const toggleRead = async (row) => {
   try {
     await api.setLida('pedidos_orcamento', row.id, next)
     row.lida = next
-    if (selected.value?.id === row.id) selected.value = { ...row, lida: next }
+    // Funde no que já está aberto: `row` é a linha leve da lista e perderia o detalhe (linhas, email, origem…).
+    if (selected.value?.id === row.id) selected.value = { ...selected.value, lida: next }
   } catch (e) {
     error.value = e.message
   }
@@ -67,6 +78,13 @@ const deleteRow = async (row) => {
   } catch (e) {
     error.value = e.message
   }
+}
+
+// Estado, valor ou nota gravados no painel: a lista e o painel passam a mostrar o que ficou na BD.
+const onManaged = (updated) => {
+  const row = rows.value.find((r) => r.id === updated.id)
+  if (row) Object.assign(row, { status: updated.status, vendido_em: updated.vendido_em })
+  if (selected.value?.id === updated.id) selected.value = { ...selected.value, ...updated }
 }
 
 onMounted(load)
@@ -95,6 +113,7 @@ useAutoRefresh(() => load({ soft: true }), 60000)
       kind="orcamento"
       :record="selected"
       @close="selected = null"
+      @managed="onManaged"
     />
     <div v-else class="placeholder card">
       <h3>Nenhum orçamento aberto</h3>

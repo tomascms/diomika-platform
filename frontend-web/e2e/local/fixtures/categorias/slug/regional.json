@@ -1,0 +1,9 @@
+{
+  "id": "6eb42cc1-f652-4ab0-bde1-c028db32c8ef",
+  "nome": "Regional",
+  "slug": "regional",
+  "imagem": "https://your-project-ref.supabase.co/storage/v1/object/public/product-images/categories/imagem/5e204f2a46744c638557c3f7554b3819.png",
+  "tipo_catalogo": "regional",
+  "carrinho_step": 12,
+  "carrinho_min": 12
+}
