@@ -5,7 +5,7 @@ em `backoffice-desktop/package.json`.
 
 ## Loja — 2026-11-14
 
-- Catálogo para imprimir: folhas A4 com 3 espaços iguais por página (o ecrã mostra as folhas como saem no papel). O modelo com mais atributos, cores ou códigos de barras encolhe até caber no seu espaço; os códigos de barras passam à linha seguinte em vez de sair da folha. Sem página em branco no fim do PDF.
+- Catálogo para imprimir: folhas A4 com 3 espaços iguais por página (só ao imprimir ou guardar em PDF; no site a página é a normal, com os modelos seguidos por categoria). O modelo com mais atributos, cores ou códigos de barras encolhe até caber no seu espaço; os códigos de barras passam à linha seguinte em vez de sair da folha. Sem página em branco no fim do PDF.
 
 ## Backoffice 1.5.13 — 2026-11-11
 

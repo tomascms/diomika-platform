@@ -3,7 +3,7 @@
 // É uma página só com texto (sem fotografias, sem preços) e CSS de impressão; «Imprimir / guardar em PDF» abre o diálogo
 // do navegador, que também guarda em PDF. Sem biblioteca de PDF e sem gerar nada no servidor: sai dos mesmos dados
 // que o catálogo. `?categoria=<slug>` imprime só uma categoria.
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
 import CompanyIdentity from '@/components/CompanyIdentity.vue'
@@ -69,8 +69,6 @@ async function build() {
         category.tipo_catalogo && (!wanted.value || categorySlug(category) === wanted.value),
     )
     sections.value = await loadSections(chosen)
-    loading.value = false
-    await fitModels()
   } catch (err) {
     failure.value = errorKind(err)
     console.error(err)
@@ -115,14 +113,12 @@ const photos = (model) => {
 const drawing = (ean) => ean13Drawing(ean)
 const hasMeasure = (model) => variantList(model).some((variant) => variant.measure)
 
-// Cada página A4 tem 3 espaços iguais. O que não cabe no seu espaço encolhe (CSS `zoom`, que volta a paginar o texto)
-// até caber: procura-se o maior zoom que cabe. As medidas são em mm iguais no ecrã e no papel, por isso o que se mede
-// aqui é o que sai impresso.
+// No site é uma página normal. Só ao imprimir (ou guardar em PDF) os modelos passam a folhas A4 com 3 espaços iguais:
+// `beforeprint` liga o modo papel (classe `is-paper`, medidas em mm iguais às do @page) e o que não cabe no seu espaço
+// encolhe (CSS `zoom`, que volta a paginar o texto) até caber — procura-se o maior zoom que cabe. `afterprint` repõe o site.
 const sheets = ref(null)
 const MIN_ZOOM = 0.35
-async function fitModels() {
-  await nextTick()
-  await document.fonts?.ready
+function fitModels() {
   for (const box of sheets.value?.querySelectorAll('.print-model') || []) {
     const body = box.querySelector('.print-fit')
     const style = getComputedStyle(box)
@@ -141,10 +137,26 @@ async function fitModels() {
     body.style.zoom = String(lo)
   }
 }
+function toPaper() {
+  sheets.value?.classList.add('is-paper')
+  fitModels()
+}
+function toScreen() {
+  sheets.value?.classList.remove('is-paper')
+  for (const body of sheets.value?.querySelectorAll('.print-fit') || []) body.style.zoom = ''
+}
 
 const printPage = () => window.print()
 
-onMounted(build)
+onMounted(() => {
+  window.addEventListener('beforeprint', toPaper)
+  window.addEventListener('afterprint', toScreen)
+  build()
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeprint', toPaper)
+  window.removeEventListener('afterprint', toScreen)
+})
 </script>
 
 <template>
@@ -292,36 +304,56 @@ onMounted(build)
 }
 
 .print-category {
-  margin-top: 0;
+  margin-top: 2.5rem;
 }
 
-/* Folhas A4 no ecrã iguais às do papel: 210 × 297 mm com 14 mm de margem (o @page). */
-.print-sheets {
-  overflow-x: auto;
-  padding-bottom: 1rem;
-}
-
+/* No site cada folha desaparece (os modelos ficam seguidos por categoria). */
 .print-page {
-  box-sizing: border-box;
-  width: 210mm;
-  height: calc(267mm + 28mm);
-  margin: 0 auto 8mm;
-  padding: 14mm;
-  background: #fff;
-  box-shadow: 0 1px 6px rgb(0 0 0 / 18%);
-  display: grid;
-  grid-template-rows: repeat(3, minmax(0, 1fr));
-  gap: 3mm;
-  overflow: hidden;
-}
-
-/* A primeira página de cada categoria leva o nome por cima dos 3 espaços. */
-.print-page.has-head {
-  grid-template-rows: auto repeat(3, minmax(0, 1fr));
+  display: contents;
 }
 
 .print-fit {
   width: 100%;
+}
+
+/* Modo papel (ligado só ao imprimir): folhas A4 com 14 mm de margem, 182 × 267 mm, 3 espaços iguais. */
+.is-paper .print-page {
+  box-sizing: border-box;
+  display: grid;
+  width: 182mm;
+  height: 267mm;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 3mm;
+  overflow: hidden;
+  break-before: page;
+}
+
+/* A primeira folha de cada categoria leva o nome por cima dos 3 espaços. */
+.is-paper .print-page.has-head {
+  grid-template-rows: auto repeat(3, minmax(0, 1fr));
+}
+
+.is-paper .print-model {
+  min-height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 3mm 3.5mm;
+  border-color: #999;
+  box-shadow: none;
+  break-inside: avoid;
+}
+
+.is-paper .print-category {
+  margin-top: 0;
+}
+
+.is-paper .print-photos {
+  grid-template-columns: repeat(5, 1fr);
+  max-width: none;
+}
+
+.is-paper .print-barcode {
+  flex: 0 0 120px;
 }
 
 .print-category-head {
@@ -339,11 +371,10 @@ onMounted(build)
 }
 
 .print-model {
-  grid-row: span 1;
-  min-height: 0;
-  overflow: hidden;
-  padding: 3mm 3.5mm;
-  border: 1px solid #999;
+  margin-top: 1rem;
+  padding: 1.1rem 1.25rem;
+  background: #fff;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
 
@@ -375,9 +406,10 @@ onMounted(build)
 /* As fotos ocupam a largura toda: exatamente 5 colunas iguais, quadradas (a proporção não muda). */
 .print-photos {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 2mm;
-  margin: 0.5rem 0 0;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+  max-width: 680px;
+  margin: 0.6rem 0 0;
 }
 
 .print-photos img {
@@ -463,34 +495,11 @@ onMounted(build)
     display: none !important;
   }
 
-  /* Cada página tem no máximo 3 modelos (de uma categoria): todas as páginas começam numa folha nova. */
-  .print-catalogue .print-page {
-    break-before: page;
-    width: auto;
-    height: 267mm;
-    margin: 0;
-    padding: 0;
-    box-shadow: none;
-  }
-
-  .print-catalogue .print-sheets {
-    overflow: visible;
-    padding: 0;
-  }
-
   /* Nada depois da última folha: um espaço a mais dava uma página em branco no fim do PDF. */
   .print-catalogue,
   .app-main {
     padding-bottom: 0 !important;
     margin-bottom: 0 !important;
-  }
-
-  .print-catalogue .print-category {
-    margin-top: 0;
-  }
-
-  .print-catalogue .print-model {
-    break-inside: avoid;
   }
 
   .print-catalogue a {

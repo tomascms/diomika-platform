@@ -128,6 +128,8 @@ test.describe('impressão', () => {
   }) => {
     await page.goto('/catalogo-imprimir')
     await expect(page.locator('article.print-model').first()).toBeVisible()
+    // O navegador manda `beforeprint` antes de imprimir; o emulateMedia não o manda.
+    await page.evaluate(() => window.dispatchEvent(new Event('beforeprint')))
     await page.emulateMedia({ media: 'print' })
 
     for (const hidden of ['.app-header', '.app-footer', '.whatsapp-fab', '.breadcrumbs', '.print-toolbar']) {
@@ -178,6 +180,10 @@ test('cada folha A4 leva até 3 modelos e o que tem mais atributos encolhe até 
   )
   await page.goto('/catalogo-imprimir?categoria=almofada')
   await expect(page.locator('article.print-model').first()).toBeVisible()
+  // No site é uma página normal; as folhas A4 só se montam ao imprimir.
+  await expect(page.locator('.print-sheets')).not.toHaveClass(/is-paper/)
+  await page.evaluate(() => window.dispatchEvent(new Event('beforeprint')))
+  await expect(page.locator('.print-sheets')).toHaveClass(/is-paper/)
   await expect
     .poll(() =>
       page.evaluate(() =>
@@ -191,4 +197,6 @@ test('cada folha A4 leva até 3 modelos e o que tem mais atributos encolhe até 
     .toBe(true)
   for (const sheet of await page.locator('.print-page').all())
     expect(await sheet.locator('article.print-model').count()).toBeLessThanOrEqual(3)
+  await page.evaluate(() => window.dispatchEvent(new Event('afterprint')))
+  await expect(page.locator('.print-sheets')).not.toHaveClass(/is-paper/)
 })
