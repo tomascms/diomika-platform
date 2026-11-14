@@ -3,6 +3,10 @@
 Versão única do ecossistema em `backend-api/core/version.py`. Backoffice com versão própria
 em `backoffice-desktop/package.json`.
 
+## Loja — 2026-11-14
+
+- Catálogo para imprimir: folhas A4 com 3 espaços iguais por página (o ecrã mostra as folhas como saem no papel). O modelo com mais atributos, cores ou códigos de barras encolhe até caber no seu espaço; os códigos de barras passam à linha seguinte em vez de sair da folha. Sem página em branco no fim do PDF.
+
 ## Backoffice 1.5.13 — 2026-11-11
 
 - «Quantidade mínima» passa a ser da categoria (formulário da categoria) e é também o passo do pedido: 12 → 12, 24, 36…. Sai o «Incremento» do formulário do modelo; a loja, a API e as encomendas internas seguem a categoria.

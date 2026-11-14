@@ -19,17 +19,25 @@ const error = ref('')
 // Estado gravado por id: só se envia ao servidor o que mudou (antes: um PUT por cor a cada gravação).
 let saved = new Map()
 
-const emptyRow = () => ({ id: null, numero: '', nome: '', imagem: '', vis: false, pendingFile: null })
+// Uma cor tem várias imagens: `imagens` são as já guardadas (a primeira é a principal) e `pendingFiles` as escolhidas
+// que ainda não subiram. Ao gravar, sobem por ordem e passam para `imagens`.
+const emptyRow = () => ({ id: null, numero: '', nome: '', imagens: [], pendingFiles: [], vis: false })
 const toRow = (c) => ({
   id: c.id,
   numero: String(c.numero ?? ''),
   nome: c.nome || '',
-  imagem: c.imagem || '',
+  imagens: Array.isArray(c.imagens) && c.imagens.length ? [...c.imagens] : c.imagem ? [c.imagem] : [],
+  pendingFiles: [],
   vis: c.visibilidade === true,
-  pendingFile: null,
 })
 const contentKey = (row, vis) =>
-  JSON.stringify([String(row.numero || '').trim(), (row.nome || '').trim(), row.imagem || '', Boolean(vis)])
+  JSON.stringify([
+    String(row.numero || '').trim(),
+    (row.nome || '').trim(),
+    row.imagens || [],
+    (row.pendingFiles || []).length,
+    Boolean(vis),
+  ])
 
 const setRows = (data) => {
   rows.value = data.length ? data.map(toRow) : props.readOnly ? [] : [emptyRow()]
@@ -76,8 +84,14 @@ const removeRow = (idx) => {
   if (!rows.value.length && !props.readOnly) rows.value.push(emptyRow())
 }
 
-const onImageFile = (row, file) => {
-  row.pendingFile = file
+const addFiles = (row, files) => {
+  row.pendingFiles.push(...files)
+}
+const removePending = (row, i) => {
+  row.pendingFiles.splice(i, 1)
+}
+const removeImage = (row, i) => {
+  row.imagens.splice(i, 1)
 }
 
 /**
@@ -89,10 +103,11 @@ const collect = async ({ visible = false, requireRows = false } = {}) => {
   error.value = ''
   const withNumber = rows.value.filter((row) => String(row.numero || '').trim())
   await mapPool(withNumber, 4, async (row) => {
-    if (row.pendingFile) {
-      const up = await api.uploadImage(props.colorsTable, 'imagem', row.pendingFile)
-      row.imagem = up.url
-      row.pendingFile = null
+    // Uma a uma e por ordem: se uma falhar, as que já subiram ficam em `imagens` e não se repetem ao tentar de novo.
+    while (row.pendingFiles.length) {
+      const up = await api.uploadImage(props.colorsTable, 'imagem', row.pendingFiles[0])
+      row.imagens.push(up.url)
+      row.pendingFiles.shift()
     }
   })
   const items = colorItems(rows.value, { visible, requireRows, newId: () => crypto.randomUUID() })
@@ -110,7 +125,7 @@ const commit = (visible) => {
 }
 
 /** Cores gravadas com imagem (para o aviso «Para aparecer na loja»). */
-const savedWithImage = computed(() => rows.value.filter((r) => r.id && r.imagem).length)
+const savedWithImage = computed(() => rows.value.filter((r) => r.id && r.imagens.length).length)
 
 defineExpose({ collect, commit, savedWithImage })
 </script>
@@ -119,7 +134,7 @@ defineExpose({ collect, commit, savedWithImage })
   <section class="colors-panel">
     <h3>Cores do modelo</h3>
     <p class="hint">
-      Pelo menos uma cor com número e imagem.
+      Pelo menos uma cor com número e imagem. Cada cor pode ter várias imagens; a primeira é a principal.
     </p>
     <p v-if="loading" class="muted">A carregar cores…</p>
     <p v-if="error" class="err">{{ error }}</p>
@@ -128,12 +143,25 @@ defineExpose({ collect, commit, savedWithImage })
       <div class="fields">
         <input v-model="row.numero" class="input num" type="number" min="1" placeholder="Nº" :disabled="readOnly" />
         <input v-model="row.nome" class="input" placeholder="Nome cor" :disabled="readOnly" />
+
+        <div class="imgs">
+          <div v-for="(url, i) in row.imagens" :key="`${url}-${i}`" class="img-item">
+            <img :src="url" alt="" class="thumb" />
+            <span v-if="i === 0" class="tag">principal</span>
+            <button v-if="!readOnly" type="button" class="btn btn-ghost btn-sm" @click="removeImage(row, i)">Remover</button>
+          </div>
+          <div v-for="(file, i) in row.pendingFiles" :key="`pending-${i}-${file.name}`" class="img-item pending">
+            <span class="muted">{{ file.name }} (por enviar)</span>
+            <button v-if="!readOnly" type="button" class="btn btn-ghost btn-sm" @click="removePending(row, i)">Remover</button>
+          </div>
+        </div>
+
         <ImageField
           v-if="!readOnly"
-          v-model="row.imagem"
-          @file-selected="onImageFile(row, $event)"
+          multiple
+          :model-value="''"
+          @file-selected="addFiles(row, $event)"
         />
-        <img v-else-if="row.imagem" :src="row.imagem" alt="" class="thumb" />
       </div>
       <button v-if="!readOnly" type="button" class="btn btn-danger btn-sm" @click="removeRow(idx)">X</button>
     </article>
@@ -149,6 +177,10 @@ defineExpose({ collect, commit, savedWithImage })
 .color-row { padding: 14px; display: flex; gap: 12px; align-items: flex-start; }
 .fields { flex: 1; display: grid; gap: 10px; }
 .num { max-width: 80px; }
+.imgs { display: flex; flex-wrap: wrap; gap: 10px; }
+.img-item { display: grid; gap: 6px; justify-items: start; }
+.img-item.pending { display: flex; gap: 8px; align-items: center; }
 .thumb { max-width: 120px; border-radius: 8px; border: 1px solid var(--border); }
+.tag { font-size: 0.75rem; color: var(--text-muted); }
 .btn-sm { padding: 6px 10px; }
 </style>

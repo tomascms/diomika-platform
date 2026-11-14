@@ -16,12 +16,15 @@ export function colorItems(rows, { visible = false, requireRows = false, newId }
     throw missingRows('Adicione pelo menos uma cor (número + imagem).')
   }
   return filled.map((row) => {
-    if (!row.imagem) throw new Error(`Cor nº ${String(row.numero).trim()}: escolha uma imagem.`)
+    // Uma cor pode ter várias imagens; a primeira é a principal (`imagem`, que a loja e as verificações leem).
+    const imagens = (row.imagens || []).filter(Boolean)
+    if (!imagens.length) throw new Error(`Cor nº ${String(row.numero).trim()}: escolha uma imagem.`)
     return {
       id: row.id || newId(),
       numero: parseInt(String(row.numero).trim(), 10),
       nome: (row.nome || '').trim(),
-      imagem: row.imagem,
+      imagem: imagens[0],
+      imagens,
       visibilidade: visible,
     }
   })

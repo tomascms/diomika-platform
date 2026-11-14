@@ -23,7 +23,7 @@ def _attach_cores(rows: list[dict]) -> None:
     if model_ids:
         for cor in (
             db.table("product_model_colors")
-            .select("id_modelo, numero, nome, imagem, visibilidade")
+            .select("id_modelo, numero, nome, imagem, imagens, visibilidade")
             .in_("id_modelo", model_ids)
             .execute()
             .data

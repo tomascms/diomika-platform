@@ -63,7 +63,7 @@ def _attach_modelo_cores(rows: list[dict]) -> None:
         direct = (
             get_db()
             .table(PRODUCT_MODEL_COLORS_TABLE)
-            .select("id_modelo, numero, nome, imagem, visibilidade")
+            .select("id_modelo, numero, nome, imagem, imagens, visibilidade")
             .in_("id_modelo", model_ids[start : start + _COLOR_BATCH])
             .execute()
             .data

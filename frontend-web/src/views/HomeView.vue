@@ -38,7 +38,11 @@ watch(
   () => nextTick(updateArrows),
   { flush: 'post' },
 )
-onMounted(() => window.addEventListener('resize', updateArrows))
+// Com as categorias já em cache a lista aparece logo ao montar: sem isto as setas só acertavam depois de um scroll.
+onMounted(() => {
+  window.addEventListener('resize', updateArrows)
+  nextTick(updateArrows)
+})
 onUnmounted(() => window.removeEventListener('resize', updateArrows))
 </script>
 

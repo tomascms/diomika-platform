@@ -131,8 +131,21 @@ class ProductModelColor(BaseModel):
     id_modelo: UUID = Field(..., json_schema_extra={"ui_hidden": True})
     numero: int = Field(..., ge=1, description="Número da cor")
     nome: str = Field(default="", description="Nome da cor (opcional)")
-    imagem: str = Field(..., description="URL da imagem desta cor")
+    imagem: str = Field(default="", description="URL da imagem principal desta cor (a primeira de `imagens`)")
+    imagens: List[str] = Field(default_factory=list, description="Todas as imagens desta cor, por ordem")
     visibilidade: bool = Field(default=False)
+
+    @model_validator(mode="after")
+    def _imagens_da_cor(self):
+        """Aceita várias imagens para a mesma cor: sem repetidas nem vazias, e `imagem` fica a primeira."""
+        ordered: List[str] = []
+        for url in [self.imagem, *self.imagens]:
+            url = str(url or "").strip()
+            if url and url not in ordered:
+                ordered.append(url)
+        self.imagens = ordered
+        self.imagem = ordered[0] if ordered else ""
+        return self
 
 
 # Colunas anuláveis de `product_models` (db/migrations/2026-10-28_modelos_fabricante.sql): quem fabrica ou importa o artigo

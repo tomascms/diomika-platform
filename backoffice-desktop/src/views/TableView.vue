@@ -8,8 +8,7 @@ import { useWorkspace } from '@/composables/useWorkspace'
 import { useAggregatedTipos } from '@/composables/useAggregatedTipos'
 import DataList from '@/components/DataList.vue'
 import CategoryCreatePanel from '@/components/CategoryCreatePanel.vue'
-import { buildLabelLbx, labelCaption, labelFileName, modelPageUrl, SITE_HOME_URL } from '@/lib/etiquetaLbx'
-import { renderLabelBmp } from '@/lib/etiquetaImagem'
+import { buildProductLabelLbx, dataUrlToBytes, labelCaption, labelFileName, modelPageUrl, SITE_HOME_URL } from '@/lib/etiquetaLbx'
 
 import labelTemplateXml from '@/assets/etiqueta/label.xml?raw'
 import labelPropXml from '@/assets/etiqueta/prop.xml?raw'
@@ -244,7 +243,7 @@ const toggleVisibility = async (row) => {
 // Etiqueta QR de um produto: QR com o link da página do modelo na loja, guardado em PDF (para as etiquetas).
 const canQr = (row) => Boolean(row?.ean) && Boolean(embeddedModel(row))
 
-// Etiqueta Brother (.lbx) do produto: logo, nome, EAN e dois QR codes (loja e produto), com o tamanho do modelo.
+// Etiqueta Brother (.lbx) do produto: o modelo do cliente com a legenda, o EAN, o QR do produto e o «Made in» deste produto.
 const labelForRow = async (row) => {
   const model = embeddedModel(row)
   const productUrl = modelPageUrl({ categoryName: model?.categories?.nome, modelName: model?.nome, ean: row.ean })
@@ -257,21 +256,22 @@ const labelForRow = async (row) => {
     return
   }
   try {
-    const { bmp } = await renderLabelBmp({
-      logoUrl: labelLogoUrl,
+    const bytes = await buildProductLabelLbx({
+      templateXml: labelTemplateXml,
+      propXml: labelPropXml,
+      logoBmp: dataUrlToBytes(labelLogoUrl),
       ean: row.ean,
       caption: labelCaption({
         categoryName: model?.categories?.nome,
         modelName: model.nome,
         dimension: typeof row.attributes?.dimensoes === 'string' ? row.attributes.dimensoes : '',
       }),
-      shopUrl: SITE_HOME_URL,
       productUrl,
       madeIn: model.made_in || model.attributes?.origem || '',
     })
-    const bytes = await buildLabelLbx({ labelXml: labelTemplateXml, propXml: labelPropXml, labelBmp: bmp })
     const res = await window.diomikaDesktop.saveLabel(labelFileName(model.nome, row.ean), bytes)
     if (res?.saved) message.value = 'Etiqueta guardada.'
+    else if (res?.error) error.value = res.error
   } catch (e) {
     error.value = e.message || 'Não foi possível gerar a etiqueta.'
   }

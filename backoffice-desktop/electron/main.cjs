@@ -323,7 +323,18 @@ ipcMain.handle('save-label', async (event, payload) => {
     filters: [{ name: 'Etiqueta Brother', extensions: ['lbx'] }],
   })
   if (canceled || !filePath) return { saved: false }
-  await fs.promises.writeFile(filePath, Buffer.from(bytes))
+  try {
+    await fs.promises.writeFile(filePath, Buffer.from(bytes))
+  } catch (err) {
+    // O Windows bloqueia o ficheiro enquanto outra aplicação (ex.: P-touch Editor) o tem aberto.
+    if (err.code === 'EBUSY' || err.code === 'EPERM') {
+      return {
+        saved: false,
+        error: `O ficheiro «${path.basename(filePath)}» está aberto noutra aplicação (por exemplo, o P-touch Editor). Feche-o e tente de novo, ou guarde com outro nome.`,
+      }
+    }
+    throw err
+  }
   return { saved: true, path: filePath }
 })
 

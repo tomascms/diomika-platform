@@ -260,9 +260,10 @@ def admin_list_select_query(table: str, *, embed_category: bool = False) -> str:
     physical = physical_table_for(table)
     if physical == PRODUCT_VARIANTS_TABLE:
         cols = ["id", "ean", "tipo_catalogo", "attributes", "visibilidade", "created_at", "id_modelo"]
+        # `made_in` e `attributes` do modelo: a etiqueta (QR) do produto precisa do país de fabrico.
         if embed_category:
-            return f"{', '.join(cols)}, {PRODUCT_MODELS_TABLE}(nome, categories(nome))"
-        return f"{', '.join(cols)}, {PRODUCT_MODELS_TABLE}(nome)"
+            return f"{', '.join(cols)}, {PRODUCT_MODELS_TABLE}(nome, made_in, attributes, categories(nome))"
+        return f"{', '.join(cols)}, {PRODUCT_MODELS_TABLE}(nome, made_in, attributes)"
     if physical == PRODUCT_MODELS_TABLE:
         cols = ["id", "nome", "tipo_catalogo", "attributes", "visibilidade", "created_at", "id_categoria"]
         if embed_category:
@@ -271,7 +272,7 @@ def admin_list_select_query(table: str, *, embed_category: bool = False) -> str:
     if physical == PRODUCT_MODEL_COLORS_TABLE:
         # !inner: ver list_select_query — a família de uma cor vem do modelo-pai.
         # `imagem` tem de vir: sem ela o formulário do modelo abria as cores sem foto e pedia a imagem outra vez.
-        return f"id, numero, nome, imagem, visibilidade, id_modelo, created_at, {PRODUCT_MODELS_TABLE}!inner(tipo_catalogo)"
+        return f"id, numero, nome, imagem, imagens, visibilidade, id_modelo, created_at, {PRODUCT_MODELS_TABLE}!inner(tipo_catalogo)"
     if table == "pedidos_orcamento":
         # `lida` e `status` na lista: o alternar lida/não lida e o estado precisam deles (sem `lida` o botão falhava).
         return "id, nome, email, lida, status, vendido_em, visibilidade, created_at"

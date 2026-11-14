@@ -44,31 +44,28 @@ test.describe('o catálogo todo', () => {
       'Toalhas de Mesa',
     ])
     await expect(page.locator('article.print-model')).toHaveCount(productPages().length)
-    await expect(page.locator('.print-ean')).toHaveCount(await eanCount())
+    await expect(page.locator('.print-barcode')).toHaveCount(await eanCount())
     await expect(page.locator('body')).not.toContainText(/sem descri/i)
     // Sem preços e com a identificação de quem vende.
     await expect(page.locator('.print-head')).toContainText('Sem preços: peça orçamento. Pedido mínimo de 500 € + IVA')
     await expect(page.locator('.print-head address')).toContainText('DIOMIKA INTERNACIONAL, UNIPESSOAL, LDA')
   })
 
-  test('um modelo: especificações, medidas por ordem com o EAN de cada uma, e as cores (sem repetir o que a tabela diz)', async ({
-    page,
-  }) => {
+  test('um modelo: especificações, 5 fotos, códigos de barras por ordem de medida e as cores', async ({ page }) => {
     await page.goto('/catalogo-imprimir')
     const foglia = page.locator('article.print-model', { has: page.getByRole('heading', { name: 'Foglia', exact: true }) })
 
-    // A descrição gerada repetia as especificações e a tabela logo a seguir: só entra a que o cliente escreve.
+    // A descrição gerada repetia as especificações: só entra a que o cliente escreve.
     await expect(foglia.locator('.print-desc')).toHaveCount(0)
     await expect(foglia.locator('.print-specs dt')).toHaveText(['Composição'])
     await expect(foglia.locator('.print-specs dd')).toHaveText(['100% Poliester'])
-    await expect(foglia.locator('.print-table th')).toHaveText(['Medida', 'EAN'])
-    await expect(foglia.locator('.print-table tbody tr')).toHaveText([
-      '35x50 cm5606044506574',
-      '45x45 cm5606044506598',
-      '60x60 cm5606044506734',
-    ])
+    await expect(foglia.locator('.print-table')).toHaveCount(0) // a tabela de medidas e EAN saiu: os códigos de barras trazem o EAN
+    await expect(foglia.locator('.print-photos img')).toHaveCount(5)
+    await expect(foglia.locator('.print-barcode-measure')).toHaveText(['35x50 cm', '45x45 cm', '60x60 cm'])
+    await expect(foglia.locator('.print-barcode svg').nth(0)).toHaveAttribute('aria-label', 'EAN 5606044506574')
+    await expect(foglia.locator('.print-barcode svg').nth(2)).toHaveAttribute('aria-label', 'EAN 5606044506734')
     await expect(foglia.locator('.print-colors')).toHaveText(
-      'Cores: 12 Azul Ciano, 13 Azul Marinho, 18 Bege, 21 Caqui, 22 Vermelho',
+      'Cores: Azul Ciano(12), Azul Marinho(13), Bege(18), Caqui(21), Vermelho(22)',
     )
   })
 
@@ -86,13 +83,12 @@ test.describe('o catálogo todo', () => {
   test('assento por altura, artigo único sem coluna de medida e uma só cor', async ({ page }) => {
     await page.goto('/catalogo-imprimir')
     const liso = page.locator('article.print-model', { has: page.getByRole('heading', { name: 'Liso', exact: true }) })
-    await expect(liso.locator('.print-table th')).toHaveText(['Altura', 'EAN'])
-    await expect(liso.locator('.print-table tbody tr td:first-child')).toHaveText(['32mm', '45mm'])
-    await expect(liso.locator('.print-colors')).toHaveText('Cor: Sortido (n.º 1)')
+    await expect(liso.locator('.print-barcode-measure')).toHaveText(['32mm', '45mm'])
+    await expect(liso.locator('.print-colors')).toHaveText('Cor: Sortido(1)')
 
     const avental = page.locator('article.print-model', { has: page.getByRole('heading', { name: 'Avental Liso', exact: true }) })
-    await expect(avental.locator('.print-table th')).toHaveText(['EAN'])
-    await expect(avental.locator('.print-table tbody tr')).toHaveCount(1)
+    await expect(avental.locator('.print-barcode')).toHaveCount(1)
+    await expect(avental.locator('.print-barcode-measure')).toHaveCount(0)
   })
 })
 
@@ -137,12 +133,16 @@ test.describe('impressão', () => {
     for (const hidden of ['.app-header', '.app-footer', '.whatsapp-fab', '.breadcrumbs', '.print-toolbar']) {
       await expect(page.locator(hidden).first(), hidden).toBeHidden()
     }
-    await expect(page.locator('.print-head h1')).toBeVisible()
+    await expect(page.locator('.print-head')).toBeHidden()
     await expect(page.locator('article.print-model').first()).toBeVisible()
+    // Cada página começa numa folha nova e tem no máximo 3 modelos (de uma categoria).
     const breaks = await page
-      .locator('.print-category')
-      .evaluateAll((sections) => sections.map((s) => getComputedStyle(s).breakBefore))
-    expect(breaks).toEqual(['auto', 'page', 'page', 'page', 'page', 'page'])
+      .locator('.print-page')
+      .evaluateAll((pages) => pages.map((p) => getComputedStyle(p).breakBefore))
+    expect(breaks.length).toBeGreaterThan(0)
+    expect(new Set(breaks)).toEqual(new Set(['page']))
+    const sizes = await page.locator('.print-page').evaluateAll((pages) => pages.map((p) => p.querySelectorAll('article.print-model').length))
+    expect(Math.max(...sizes)).toBeLessThanOrEqual(3)
     expect(await page.locator('article.print-model').first().evaluate((el) => getComputedStyle(el).breakInside)).toBe('avoid')
   })
 
@@ -155,7 +155,7 @@ test.describe('impressão', () => {
     await expect(page.locator('article.print-model').first()).toBeVisible()
     await page.emulateMedia({ media: 'print' })
 
-    await expect(page.locator('.print-head h1')).toBeVisible()
+    await expect(page.locator('.print-head')).toBeHidden()
     await expect(page.locator('article.print-model').first()).toBeVisible()
     await expect(page.locator('footer')).toBeHidden() // o rodapé do site fica de fora, como no resto do catálogo
   })
@@ -167,4 +167,28 @@ test.describe('onde se encontra', () => {
     await page.locator('.shortcuts').getByRole('link', { name: 'Catálogo para imprimir ou guardar em PDF' }).click()
     await expect(page).toHaveURL(/\/catalogo-imprimir$/)
   })
+})
+
+test('cada folha A4 leva até 3 modelos e o que tem mais atributos encolhe até caber', async ({ page }) => {
+  const list = 'catalogo/almofada/modelos-catalogo/4bba6298-b2d8-4d80-9303-49118f2bb29c'
+  const models = await fixture(list)
+  const long = 'Almofada em veludo de toque macio, enchimento de fibra hipoalergénica e capa removível. '.repeat(6)
+  await page.route((url) => url.pathname === `/api/${list}`, (route) =>
+    route.fulfill({ json: models.map((m) => ({ ...m, descricao: long })) }),
+  )
+  await page.goto('/catalogo-imprimir?categoria=almofada')
+  await expect(page.locator('article.print-model').first()).toBeVisible()
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        [...document.querySelectorAll('.print-model')].every((box) => {
+          const s = getComputedStyle(box)
+          const room = box.clientHeight - parseFloat(s.paddingTop) - parseFloat(s.paddingBottom)
+          return box.querySelector('.print-fit').getBoundingClientRect().height <= room + 1
+        }),
+      ),
+    )
+    .toBe(true)
+  for (const sheet of await page.locator('.print-page').all())
+    expect(await sheet.locator('article.print-model').count()).toBeLessThanOrEqual(3)
 })

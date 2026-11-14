@@ -310,7 +310,7 @@ watch(() => route.fullPath, fetchProduct)
 
         <div v-if="colors.length > 1" class="color-picker">
           <p class="color-picker-label">
-            Cor {{ selectedColor.numero }}
+            {{ selectedColor.numero }}
             <span v-if="selectedColor.nome"> — {{ selectedColor.nome }}</span>
           </p>
           <div class="color-thumbs">

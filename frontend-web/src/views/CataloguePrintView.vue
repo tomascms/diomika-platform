@@ -3,7 +3,7 @@
 // É uma página só com texto (sem fotografias, sem preços) e CSS de impressão; «Imprimir / guardar em PDF» abre o diálogo
 // do navegador, que também guarda em PDF. Sem biblioteca de PDF e sem gerar nada no servidor: sai dos mesmos dados
 // que o catálogo. `?categoria=<slug>` imprime só uma categoria.
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
 import CompanyIdentity from '@/components/CompanyIdentity.vue'
@@ -13,8 +13,9 @@ import { useCatalog } from '@/composables/useCatalog'
 import { useCategories } from '@/composables/useCategories'
 import { categoryProductsRoute, categorySlug } from '@/lib/catalogRoutes'
 import { MIN_ORDER } from '@/lib/constants'
-import { pickerNoun, pretty, realDescription, storeLabel } from '@/lib/describe'
+import { pretty, realDescription, storeLabel } from '@/lib/describe'
 import { errorKind } from '@/lib/errors'
+import { ean13Drawing } from '@/lib/ean13Svg'
 import { showableModel, specRows, variantList } from '@/lib/storefrontFormat'
 
 const route = useRoute()
@@ -68,6 +69,8 @@ async function build() {
         category.tipo_catalogo && (!wanted.value || categorySlug(category) === wanted.value),
     )
     sections.value = await loadSections(chosen)
+    loading.value = false
+    await fitModels()
   } catch (err) {
     failure.value = errorKind(err)
     console.error(err)
@@ -84,14 +87,60 @@ const colors = (model) =>
   (model.modelo_cores || [])
     .filter((c) => c && c.visibilidade !== false)
     .sort((a, b) => a.numero - b.numero)
+// Formato «nome(número)», por exemplo «Azul Ciano(12)».
+const colorLabel = (c) => (c.nome ? `${c.nome}(${c.numero})` : `${c.numero}`)
 const colorsText = (model) => {
   const list = colors(model)
-  if (list.length === 1)
-    return `Cor: ${list[0].nome || `n.º ${list[0].numero}`}${list[0].nome ? ` (n.º ${list[0].numero})` : ''}`
-  return `Cores: ${list.map((c) => [c.numero, c.nome].filter(Boolean).join(' ')).join(', ')}`
+  return `${list.length === 1 ? 'Cor' : 'Cores'}: ${list.map(colorLabel).join(', ')}`
 }
-const measureHeading = (model) => pretty(pickerNoun(model._storefront?.picker)[0])
+// Fotos do próprio modelo (das suas cores), sem repetir, no máximo 5.
+const PHOTOS_PER_MODEL = 5
+// No papel: 3 modelos por página (cada página é de uma só categoria).
+const PER_PAGE = 3
+const chunk = (list, size) => {
+  const out = []
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size))
+  return out
+}
+const photos = (model) => {
+  const out = []
+  for (const color of colors(model)) {
+    for (const url of color.imagens?.length ? color.imagens : [color.imagem]) {
+      if (url && !out.includes(url)) out.push(url)
+    }
+  }
+  return out.slice(0, PHOTOS_PER_MODEL)
+}
+// Código de barras em vetor (nítido), desenhado pelo template: só para EAN válidos, senão nada.
+const drawing = (ean) => ean13Drawing(ean)
 const hasMeasure = (model) => variantList(model).some((variant) => variant.measure)
+
+// Cada página A4 tem 3 espaços iguais. O que não cabe no seu espaço encolhe (CSS `zoom`, que volta a paginar o texto)
+// até caber: procura-se o maior zoom que cabe. As medidas são em mm iguais no ecrã e no papel, por isso o que se mede
+// aqui é o que sai impresso.
+const sheets = ref(null)
+const MIN_ZOOM = 0.35
+async function fitModels() {
+  await nextTick()
+  await document.fonts?.ready
+  for (const box of sheets.value?.querySelectorAll('.print-model') || []) {
+    const body = box.querySelector('.print-fit')
+    const style = getComputedStyle(box)
+    const room = box.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom)
+    const fits = () => body.getBoundingClientRect().height <= room
+    body.style.zoom = ''
+    if (fits()) continue
+    let lo = MIN_ZOOM
+    let hi = 1
+    for (let i = 0; i < 8; i += 1) {
+      const mid = (lo + hi) / 2
+      body.style.zoom = String(mid)
+      if (fits()) lo = mid
+      else hi = mid
+    }
+    body.style.zoom = String(lo)
+  }
+}
 
 const printPage = () => window.print()
 
@@ -136,15 +185,18 @@ onMounted(build)
         >
       </div>
 
-      <template v-else>
+      <div v-else ref="sheets" class="print-sheets">
         <section v-for="{ category, models } in sections" :key="category.id" class="print-category">
-          <div class="print-category-head">
+          <template v-for="(group, gi) in chunk(models, PER_PAGE)" :key="gi">
+          <div class="print-page" :class="{ 'has-head': gi === 0 }">
+          <div v-if="gi === 0" class="print-category-head">
             <h2>{{ pretty(category.nome) }}</h2>
             <RouterLink :to="categoryProductsRoute(category)" class="no-print print-category-link"
               >ver no site</RouterLink
             >
           </div>
-          <article v-for="model in models" :key="model.id" class="print-model">
+          <article v-for="model in group" :key="model.id" class="print-model">
+            <div class="print-fit">
             <h3>{{ model.nome }}</h3>
             <p v-if="realDescription(model.descricao)" class="print-desc">
               {{ realDescription(model.descricao) }}
@@ -155,24 +207,48 @@ onMounted(build)
                 <dd>{{ row.display }}</dd>
               </template>
             </dl>
-            <table class="print-table">
-              <thead>
-                <tr>
-                  <th v-if="hasMeasure(model)" scope="col">{{ measureHeading(model) }}</th>
-                  <th scope="col">EAN</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="variant in variantList(model)" :key="variant.ean">
-                  <td v-if="hasMeasure(model)">{{ variant.measure }}</td>
-                  <td class="print-ean">{{ variant.ean }}</td>
-                </tr>
-              </tbody>
-            </table>
+            <div v-if="photos(model).length" class="print-photos">
+              <img v-for="(url, i) in photos(model)" :key="`${url}-${i}`" :src="url" alt="" loading="eager" />
+            </div>
             <p class="print-colors">{{ colorsText(model) }}</p>
+            <div class="print-barcodes">
+              <div v-for="variant in variantList(model)" :key="`bc-${variant.ean}`" class="print-barcode">
+                <span v-if="hasMeasure(model)" class="print-barcode-measure">{{ variant.measure }}</span>
+                <svg
+                  v-if="drawing(variant.ean)"
+                  class="print-barcode-svg"
+                  :viewBox="drawing(variant.ean).viewBox"
+                  role="img"
+                  :aria-label="`EAN ${drawing(variant.ean).ean}`"
+                >
+                  <g fill="#000">
+                    <rect
+                      v-for="(bar, i) in drawing(variant.ean).bars"
+                      :key="i"
+                      :x="bar.x"
+                      y="0"
+                      :width="bar.width"
+                      :height="bar.height"
+                    />
+                  </g>
+                  <g font-family="Arial, Helvetica, sans-serif" font-size="9" fill="#000">
+                    <text
+                      v-for="(t, i) in drawing(variant.ean).texts"
+                      :key="i"
+                      :x="t.x"
+                      :y="drawing(variant.ean).baseline"
+                      text-anchor="middle"
+                    >{{ t.text }}</text>
+                  </g>
+                </svg>
+              </div>
+            </div>
+            </div>
           </article>
+          </div>
+          </template>
         </section>
-      </template>
+      </div>
     </div>
   </div>
 </template>
@@ -216,7 +292,36 @@ onMounted(build)
 }
 
 .print-category {
-  margin-top: 2rem;
+  margin-top: 0;
+}
+
+/* Folhas A4 no ecrã iguais às do papel: 210 × 297 mm com 14 mm de margem (o @page). */
+.print-sheets {
+  overflow-x: auto;
+  padding-bottom: 1rem;
+}
+
+.print-page {
+  box-sizing: border-box;
+  width: 210mm;
+  height: calc(267mm + 28mm);
+  margin: 0 auto 8mm;
+  padding: 14mm;
+  background: #fff;
+  box-shadow: 0 1px 6px rgb(0 0 0 / 18%);
+  display: grid;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 3mm;
+  overflow: hidden;
+}
+
+/* A primeira página de cada categoria leva o nome por cima dos 3 espaços. */
+.print-page.has-head {
+  grid-template-rows: auto repeat(3, minmax(0, 1fr));
+}
+
+.print-fit {
+  width: 100%;
 }
 
 .print-category-head {
@@ -234,10 +339,16 @@ onMounted(build)
 }
 
 .print-model {
-  margin-top: 1.25rem;
-  padding: 1rem 1.15rem;
-  border: 1px solid var(--color-border);
+  grid-row: span 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 3mm 3.5mm;
+  border: 1px solid #999;
   border-radius: var(--radius-md);
+}
+
+.print-model h3 {
+  margin: 0;
 }
 
 .print-desc {
@@ -261,21 +372,53 @@ onMounted(build)
   margin: 0;
 }
 
-.print-table {
-  border-collapse: collapse;
-  font-size: 0.95rem;
+/* As fotos ocupam a largura toda: exatamente 5 colunas iguais, quadradas (a proporção não muda). */
+.print-photos {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2mm;
+  margin: 0.5rem 0 0;
 }
 
-.print-table th,
-.print-table td {
-  padding: 0.25rem 1.25rem 0.25rem 0;
-  border-bottom: 1px solid var(--color-border);
-  text-align: left;
+.print-photos img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border: 1px solid var(--color-border);
 }
 
-.print-ean {
-  font-family: var(--font-mono);
-  letter-spacing: 0.02em;
+/* Códigos de barras: 9 em linha que ocupam toda a largura (cada um 1/9), por baixo das cores. */
+.print-barcodes {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1.5mm 1mm;
+  margin-top: 0.6rem;
+}
+
+.print-barcode {
+  flex: 0 0 calc((100% - 8mm) / 9);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  break-inside: avoid;
+}
+
+.print-barcode-measure {
+  width: 100%;
+  overflow: hidden;
+  text-align: center;
+  font-size: 0.68rem;
+  white-space: nowrap;
+  text-overflow: clip;
+}
+
+.print-barcode-svg {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .print-colors {
@@ -315,17 +458,39 @@ onMounted(build)
     padding: 0;
   }
 
-  .print-catalogue .print-category {
-    break-before: page;
+  /* Só os produtos saem no papel: sem título, texto nem identificação da empresa. Tudo seguido, sem quebras entre categorias. */
+  .print-catalogue .print-head {
+    display: none !important;
   }
 
-  .print-catalogue .print-category:first-of-type {
-    break-before: auto;
+  /* Cada página tem no máximo 3 modelos (de uma categoria): todas as páginas começam numa folha nova. */
+  .print-catalogue .print-page {
+    break-before: page;
+    width: auto;
+    height: 267mm;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .print-catalogue .print-sheets {
+    overflow: visible;
+    padding: 0;
+  }
+
+  /* Nada depois da última folha: um espaço a mais dava uma página em branco no fim do PDF. */
+  .print-catalogue,
+  .app-main {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  .print-catalogue .print-category {
+    margin-top: 0;
   }
 
   .print-catalogue .print-model {
     break-inside: avoid;
-    border-color: #999;
   }
 
   .print-catalogue a {

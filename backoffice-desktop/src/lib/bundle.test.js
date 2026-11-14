@@ -8,21 +8,21 @@ const newId = () => `novo-${++n}`
 test('cores: as novas levam id; as gravadas mantêm o seu; linhas sem número ficam de fora', () => {
   const out = colorItems(
     [
-      { id: 'c1', numero: '2', nome: ' Azul ', imagem: 'a.png' },
-      { id: null, numero: '3', nome: '', imagem: 'b.png' },
-      { id: null, numero: '', nome: 'vazia', imagem: '' },
+      { id: 'c1', numero: '2', nome: ' Azul ', imagens: ['a.png'] },
+      { id: null, numero: '3', nome: '', imagens: ['b.png'] },
+      { id: null, numero: '', nome: 'vazia', imagens: [] },
     ],
     { visible: true, newId },
   )
   assert.deepEqual(out, [
-    { id: 'c1', numero: 2, nome: 'Azul', imagem: 'a.png', visibilidade: true },
-    { id: 'novo-1', numero: 3, nome: '', imagem: 'b.png', visibilidade: true },
+    { id: 'c1', numero: 2, nome: 'Azul', imagem: 'a.png', imagens: ['a.png'], visibilidade: true },
+    { id: 'novo-1', numero: 3, nome: '', imagem: 'b.png', imagens: ['b.png'], visibilidade: true },
   ])
 })
 
 test('cores: sem imagem e sem nenhuma linha (ao publicar) são recusadas antes de enviar', () => {
-  assert.throws(() => colorItems([{ numero: '4', imagem: '' }], { newId }), /Cor nº 4: escolha uma imagem/)
-  assert.throws(() => colorItems([{ numero: '', imagem: '' }], { requireRows: true, newId }), /pelo menos uma cor/)
+  assert.throws(() => colorItems([{ numero: '4', imagens: [] }], { newId }), /Cor nº 4: escolha uma imagem/)
+  assert.throws(() => colorItems([{ numero: '', imagens: [] }], { requireRows: true, newId }), /pelo menos uma cor/)
   assert.deepEqual(colorItems([], { newId }), [])
 })
 
@@ -44,4 +44,10 @@ test('produtos: EAN de 13 dígitos, atributo da família e obrigatoriedade', () 
 test('corpo: o que o utilizador tirou da lista vai nas listas de apagar', () => {
   const body = bundleBody({ model: { nome: 'A' }, colors: [], variants: [], deleteColors: ['c9'], deleteVariants: ['v9'] })
   assert.deepEqual(body, { model: { nome: 'A' }, colors: [], variants: [], delete_colors: ['c9'], delete_variants: ['v9'] })
+})
+
+test('cores: várias imagens por cor; a primeira é a principal', () => {
+  const [cor] = colorItems([{ numero: '12', nome: 'Azul Ciano', imagens: ['a.png', 'b.png', 'c.png'] }], { newId })
+  assert.equal(cor.imagem, 'a.png')
+  assert.deepEqual(cor.imagens, ['a.png', 'b.png', 'c.png'])
 })

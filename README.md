@@ -75,9 +75,8 @@ flowchart LR
 **Backoffice desktop**
 - Actualizações automáticas com assinatura própria verificada antes de instalar
   ([`update-signature.cjs`](backoffice-desktop/electron/update-signature.cjs)), sem certificado pago.
-- Etiquetas Brother (.lbx) desenhadas como uma só imagem 1-bit a 300 DPI com o tamanho exacto da área
-  imprimível, com QR e EAN-13; validadas no motor de render da própria Brother (b-PAC) e com os códigos
-  descodificados ([`etiquetaImagem.js`](backoffice-desktop/src/lib/etiquetaImagem.js)).
+- Etiquetas Brother (.lbx) editáveis no P-touch: o modelo do cliente (papel, margens, logo, QR, EAN-13 e texto)
+  com os dados de cada produto ([`etiquetaLbx.js`](backoffice-desktop/src/lib/etiquetaLbx.js)).
 - Criação de modelos guiada: categoria, família e subcategoria escolhidas antes do formulário, que
   mostra só os campos que essa combinação exige (gerados a partir do esquema da API).
 
