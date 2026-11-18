@@ -154,12 +154,15 @@ class BodySizeLimitMiddleware(BaseHTTPMiddleware):
     """
 
     MAX_BYTES = int(__import__("os").getenv("MAX_REQUEST_BODY_BYTES") or str(2 * 1024 * 1024))
+    # Fotos de telemóvel passam dos 2 MB; o servidor redimensiona-as antes de guardar (utils/storage.py).
+    UPLOAD_MAX_BYTES = 16 * 1024 * 1024  # 15 MB de imagem + envelope multipart
 
     async def dispatch(self, request: Request, call_next):
         cl = request.headers.get("content-length")
         if cl:
+            limit = self.UPLOAD_MAX_BYTES if request.url.path.endswith("/upload-image") else self.MAX_BYTES
             try:
-                if int(cl) > self.MAX_BYTES:
+                if int(cl) > limit:
                     return Response("Payload demasiado grande", status_code=413)
             except ValueError:
                 return Response("Content-Length inválido", status_code=400)

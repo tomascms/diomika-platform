@@ -105,7 +105,7 @@ def upload_bytes(data: bytes, dest_path: str, content_type: str = "image/png", *
     from utils.image_validation import validate_upload_bytes
 
     dest_path = sanitize_storage_path(dest_path)
-    max_bytes = int(os.getenv("STORAGE_MAX_UPLOAD_BYTES") or str(5 * 1024 * 1024))
+    max_bytes = int(os.getenv("STORAGE_MAX_UPLOAD_BYTES") or str(15 * 1024 * 1024))
     if len(data) > max_bytes:
         raise ValueError(f"Ficheiro demasiado grande (máx. {max_bytes} bytes)")
 
@@ -115,6 +115,9 @@ def upload_bytes(data: bytes, dest_path: str, content_type: str = "image/png", *
         from utils.image_resize import optimize_for_web
 
         data = optimize_for_web(data, dest_path)
+    # O bucket do Supabase recusa ficheiros acima de 5 MB (file_size_limit).
+    if len(data) > 5 * 1024 * 1024:
+        raise ValueError("Imagem demasiado grande mesmo depois de reduzida (máx. 5 MB).")
 
     lower = dest_path.lower()
     if lower.endswith((".jpg", ".jpeg")):

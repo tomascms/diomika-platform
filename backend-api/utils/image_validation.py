@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5 MB
+MAX_IMAGE_BYTES = 15 * 1024 * 1024  # 15 MB: fotos de telemóvel; o upload redimensiona antes de guardar
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
 _MAGIC = {

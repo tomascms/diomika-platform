@@ -96,7 +96,7 @@ flowchart LR
 | **Aplicação desktop** — Electron, proxy local, etiquetas Brother (.lbx) com QR e código de barras, Windows/macOS | [`backoffice-desktop/`](backoffice-desktop), [`src/lib/etiquetaLbx.js`](backoffice-desktop/src/lib/etiquetaLbx.js) |
 | **Cloud e infraestrutura** — Render (API via API REST), Docker, Cloudflare WAF/Pages/Workers cron | [`deploy/render_setup.py`](deploy/render_setup.py), [`deploy/watchdog/`](deploy/watchdog) |
 | **Segurança aplicacional** — CSP, rate limiting em camadas, SSRF guard, RLS, redacção de logs, verificações no CI | [`deploy/verify_*.py`](deploy/README.md#verificar-ci-e-pós-deploy), [`core/ssrf_guard.py`](backend-api/core/ssrf_guard.py) |
-| **Dados** — modelo de catálogo unificado orientado a esquema, migrações versionadas, backups e restauro | [`db/`](db), [`models/catalog_attributes.py`](backend-api/models/catalog_attributes.py), [`db-backup.yml`](.github/workflows/db-backup.yml) |
+| **Dados** — modelo de catálogo unificado orientado a esquema, migrações versionadas, backups e restauro | [`db/`](db), [`models/catalog_attributes.py`](backend-api/models/catalog_attributes.py), [`db-backup.yml`](ops/workflows/db-backup.yml) |
 | **SRE / operação** — deploy sem corte, vigia, métricas Prometheus, logs estruturados, runbook | [`deploy/watchdog/`](deploy/watchdog), [`core/metrics.py`](backend-api/core/metrics.py), [`docs/runbook.md`](docs/runbook.md) |
 | **Engenharia de qualidade** — auditoria de requisitos não funcionais com medições e correcções | [`docs/conformidade-rnf.md`](docs/conformidade-rnf.md), [`docs/auditoria-backoffice.md`](docs/auditoria-backoffice.md) |
 | **Produto e cliente** — documentação para o utilizador final | [`docs/guia-cliente.md`](docs/guia-cliente.md) |
@@ -137,7 +137,7 @@ O `.env` da raiz é de **produção** (ver [`.env.example`](.env.example)); os t
 | [`ci.yml`](.github/workflows/ci.yml) | PR e push | testes + cobertura mínima, Bandit, lint, builds, Trivy |
 | [`security-scan.yml`](.github/workflows/security-scan.yml) | PR, push, semanal | gitleaks, `pip`/`npm audit`, Trivy da imagem |
 | [`deploy-loja.yml`](ops/workflows/deploy-loja.yml) | push em `frontend-web/` | build, verificação de CSP e segredos, publicação, verificação live |
-| [`db-backup.yml`](.github/workflows/db-backup.yml) | diário 03:30 UTC | `pg_dump` da BD, artefacto 14 dias (a API publica-se sozinha no Render a cada push na `main`) |
+| [`db-backup.yml`](ops/workflows/db-backup.yml) | diário 03:30 UTC | `pg_dump` da BD, artefacto 14 dias (a API publica-se sozinha no Render a cada push na `main`) |
 | [`uptime.yml`](ops/workflows/uptime.yml) | à mão | verificação da API e da loja (o UptimeRobot e o vigia fazem-na sempre) |
 | [`backoffice-release.yml`](ops/workflows/backoffice-release.yml) | à mão | `.dmg` do Mac, artefacto privado de 1 dia (nunca publicado) |
 

@@ -52,7 +52,7 @@ verificar o site live (secção 6).
 
 ## 3. Base de dados (Supabase)
 - SQL em `db/` (ver `db/README.md`). Aplicar cada ficheiro de `db/migrations/` com `apply_migration` (fica no histórico), por ordem do nome, antes da API. Não há staging: ensaiar numa BD nova criada com a baseline.
-- **Backup diário:** GitHub Actions *Backup da base de dados* (`.github/workflows/db-backup.yml`) às 03:30 UTC:
+- **Backup diário:** GitHub Actions *Backup da base de dados* (`ops/workflows/db-backup.yml`) às 03:30 UTC:
   `pg_dump -Fc` verificado com `pg_restore --list`, guardado como artefacto do run durante 14 dias (Actions → run →
   *Artifacts*). Secret `DB_BACKUP_URL` (pooler, porta 5432). Inclui `app_state` (utilizadores do backoffice e estado
   do email).

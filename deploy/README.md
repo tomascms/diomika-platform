@@ -30,7 +30,7 @@ A API publica-se sozinha no Render a cada push na `main`. A loja publica-se pelo
 ## Operar
 | Ficheiro | Função |
 |---|---|
-| `../.github/workflows/db-backup.yml` | Backup diário da BD (03:30 UTC, artefacto 14 dias) |
+| `../ops/workflows/db-backup.yml` | Backup diário da BD (03:30 UTC, artefacto 14 dias) |
 | `backfill_thumbnails.py` | Gera miniaturas 480/960 px em falta no Storage |
 | `storage_orphans.py` | Lista/apaga imagens sem referência na BD (copia antes de apagar) |
 | `seed_catalog_demo.py` | Dados de demonstração `[TESTE]` |
