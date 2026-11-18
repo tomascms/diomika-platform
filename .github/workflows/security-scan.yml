@@ -55,8 +55,8 @@ jobs:
 
       - name: npm audit — loja (só dependências de produção)
         working-directory: frontend-web
-        run: npm audit --omit=dev --audit-level=high
+        run: node ../scripts/npm-audit.mjs
 
       - name: npm audit — backoffice (só o que vai no instalador)
         working-directory: backoffice-desktop
-        run: npm audit --omit=dev --audit-level=high
+        run: node ../scripts/npm-audit.mjs
